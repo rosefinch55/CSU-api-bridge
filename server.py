@@ -13,6 +13,10 @@ import uvicorn
 app = FastAPI()
 
 # ========== 配置 ==========
+# 全局功能开关
+ENABLE_THINKING = False  # 是否允许发送 thinking 参数（DeepSeek 推理模式）
+# ==========================
+
 UPSTREAMS = {
     "csu": {
         "url": "https://api.chat.csu.edu.cn/v1/chat/completions",
@@ -172,7 +176,7 @@ def anthropic_to_openai(body: dict) -> dict:
     if not is_thinking:
         thinking = body.get("thinking", {})
         is_thinking = thinking.get("type") == "enabled"
-    if is_thinking and is_deepseek:
+    if ENABLE_THINKING and is_thinking and is_deepseek:
         thinking_cfg = body.get("thinking", {})
         openai_req["enable_thinking"] = True
         openai_req["budget_tokens"] = thinking_cfg.get("budget_tokens", 4096)
