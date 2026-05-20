@@ -244,6 +244,11 @@ def openai_response_to_anthropic(openai_resp: dict, model: str) -> dict:
     }
 
     usage = openai_resp.get("usage", {})
+    anthropic_usage = {
+        "input_tokens": usage.get("prompt_tokens", 0),
+        "output_tokens": usage.get("completion_tokens", 0),
+    }
+    anthropic_usage.update({k: v for k, v in usage.items() if k not in ("prompt_tokens", "completion_tokens")})
 
     return {
         "id": f"msg_{uuid.uuid4().hex[:24]}",
@@ -253,10 +258,7 @@ def openai_response_to_anthropic(openai_resp: dict, model: str) -> dict:
         "model": model,
         "stop_reason": stop_reason_map.get(finish, "end_turn"),
         "stop_sequence": None,
-        "usage": {
-            "input_tokens": usage.get("prompt_tokens", 0),
-            "output_tokens": usage.get("completion_tokens", 0),
-        },
+        "usage": anthropic_usage,
     }
 
 
