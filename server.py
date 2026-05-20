@@ -164,11 +164,15 @@ def anthropic_to_openai(body: dict) -> dict:
     }
 
     # 思考模式：Anthropic thinking → DeepSeek enable_thinking + budget_tokens
+    # 只在 DeepSeek 上游模型上设置 thinking 参数（Qwen 不支持）
+    upstream_map = MODEL_MAP.get(req_model, (None, None))
+    upstream_model_name = upstream_map[1] if upstream_map else req_model
+    is_deepseek = upstream_model_name and "DeepSeek" in upstream_model_name
     is_thinking = "-thinking" in req_model
     if not is_thinking:
         thinking = body.get("thinking", {})
         is_thinking = thinking.get("type") == "enabled"
-    if is_thinking:
+    if is_thinking and is_deepseek:
         thinking_cfg = body.get("thinking", {})
         openai_req["enable_thinking"] = True
         openai_req["budget_tokens"] = thinking_cfg.get("budget_tokens", 4096)
