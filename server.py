@@ -304,7 +304,15 @@ async def proxy(request: Request):
     }
 
     if protocol == "anthropic":
-        # Anthropic 协议：直接透传
+        # Anthropic 协议：提取 messages 中的 system 到顶层
+        messages = body.get("messages", [])
+        system_msgs = [m for m in messages if m.get("role") == "system"]
+        if system_msgs:
+            system_text = "\n".join(m.get("content", "") for m in system_msgs if isinstance(m.get("content"), str))
+            body["messages"] = [m for m in messages if m.get("role") != "system"]
+            if system_text:
+                body["system"] = system_text + ("\n" + body.get("system", "") if body.get("system") else "")
+
         url = f"{upstream['url']}/v1/messages"
         if body.get("stream"):
             return StreamingResponse(
