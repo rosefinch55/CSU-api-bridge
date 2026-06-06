@@ -1,37 +1,36 @@
-"""
-API Bridge: Anthropic (Claude) 协议 ↔ OpenAI 兼容协议
-支持完整的工具调用（function calling）转换
-"""
-
+﻿import os
 import json
 import uuid
 import httpx
+from pathlib import Path
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 import uvicorn
 
+# Load .env
+load_dotenv(Path(__file__).parent / ".env")
+
 app = FastAPI()
 
-# ========== 配置 ==========
-# 全局功能开关
-ENABLE_THINKING = False  # 是否允许发送 thinking 参数（DeepSeek 推理模式）
-# ==========================
+# ========== Configuration ==========
+ENABLE_THINKING = False
 
 UPSTREAMS = {
     "csu": {
-        "url": "https://api.chat.csu.edu.cn/v1/chat/completions",
-        "key": "sk-xaBFFevDMTyUMiC94LMrpuJ3wq4ftvHjtJcFoxkdBjtkvT2m",
+        "url": os.getenv("CSU_URL", "https://api.chat.csu.edu.cn/v1/chat/completions"),
+        "key": os.getenv("CSU_KEY", ""),
         "protocol": "openai",
     },
     "mimo": {
-        "url": "https://token-plan-cn.xiaomimimo.com/anthropic",
-        "key": "tp-czicpog6v24c6kuv4db5wbguzrd5rhmgkbeqy8oxp8kaqxkf",
+        "url": os.getenv("MIMO_URL", "https://token-plan-cn.xiaomimimo.com/anthropic"),
+        "key": os.getenv("MIMO_KEY", ""),
         "protocol": "anthropic",
     },
 }
-PORT = 4000
+PORT = int(os.getenv("PORT", "4000"))
 
-# 模型名 → (upstream名, 上游模型名)
+# model name -> (upstream name, actual model name)
 MODEL_MAP = {
     "csu-deepseek[1m]": ("csu", "DeepSeek-V4-Flash"),
     "csu-deepseek": ("csu", "DeepSeek-V4-Flash"),
@@ -45,7 +44,7 @@ MODEL_MAP = {
     "mimo-v2.5": ("mimo", "mimo-v2.5"),
 }
 DEFAULT_MODEL = "csu-deepseek"
-# ==========================
+# ===================================
 
 
 def convert_anthropic_tools(tools):
