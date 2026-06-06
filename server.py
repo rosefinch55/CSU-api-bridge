@@ -167,6 +167,10 @@ def anthropic_to_openai(body: dict) -> dict:
         "stream": body.get("stream", False),
     }
 
+    # 流式时请求返回 usage
+    if openai_req["stream"]:
+        openai_req["stream_options"] = {"include_usage": True}
+
     # 思考模式：Anthropic thinking → DeepSeek enable_thinking + budget_tokens
     # 只在 DeepSeek 上游模型上设置 thinking 参数（Qwen 不支持）
     upstream_map = MODEL_MAP.get(req_model, (None, None))
@@ -304,15 +308,7 @@ async def proxy(request: Request):
     }
 
     if protocol == "anthropic":
-        # Anthropic 协议：提取 messages 中的 system 到顶层
-        messages = body.get("messages", [])
-        system_msgs = [m for m in messages if m.get("role") == "system"]
-        if system_msgs:
-            system_text = "\n".join(m.get("content", "") for m in system_msgs if isinstance(m.get("content"), str))
-            body["messages"] = [m for m in messages if m.get("role") != "system"]
-            if system_text:
-                body["system"] = system_text + ("\n" + body.get("system", "") if body.get("system") else "")
-
+        # Anthropic 协议：直接透传
         url = f"{upstream['url']}/v1/messages"
         if body.get("stream"):
             return StreamingResponse(
@@ -384,6 +380,7 @@ async def stream_handler(openai_req, model, headers, upstream_url):
     current_block_type = None  # "text", "tool_use", or "thinking"
     finish_reason = None
     thinking_started = False
+    usage_data = {}
 
     def start_thinking_block():
         nonlocal current_block_type, block_index, thinking_started
@@ -434,6 +431,9 @@ async def stream_handler(openai_req, model, headers, upstream_url):
                         chunk = json.loads(data)
                     except json.JSONDecodeError:
                         continue
+
+                    if chunk.get("usage"):
+                        usage_data = chunk["usage"]
 
                     choices = chunk.get("choices", [])
                     if not choices:
@@ -492,12 +492,15 @@ async def stream_handler(openai_req, model, headers, upstream_url):
     if current_block_type:
         yield make_sse("content_block_stop", {"type": "content_block_stop", "index": block_index})
 
-    # stop_reason
+    # stop_reason + usage
     stop = "tool_use" if (finish_reason == "tool_calls" and tool_calls_buf) else "end_turn"
     yield make_sse("message_delta", {
         "type": "message_delta",
         "delta": {"stop_reason": stop, "stop_sequence": None},
-        "usage": {"output_tokens": 0},
+        "usage": {
+            "input_tokens": usage_data.get("prompt_tokens", 0),
+            "output_tokens": usage_data.get("completion_tokens", 0),
+        },
     })
     yield make_sse("message_stop", {"type": "message_stop"})
 

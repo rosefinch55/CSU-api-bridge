@@ -7,4 +7,4 @@ set ANTHROPIC_BASE_URL=http://localhost:4000
 set ANTHROPIC_AUTH_TOKEN=sk-xaBFFevDMTyUMiC94LMrpuJ3wq4ftvHjtJcFoxkdBjtkvT2m
 set ANTHROPIC_MODEL=csu-qwen[256k]
 cd /d "E:\claude-code专用文件夹"
-claude
+claude --enable-auto-mode
