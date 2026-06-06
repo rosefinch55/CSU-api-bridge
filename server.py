@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import uuid
 import httpx
@@ -7,6 +7,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 import uvicorn
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+logger = logging.getLogger("apibridge")
 
 # Load .env
 load_dotenv(Path(__file__).parent / ".env")
@@ -14,7 +18,7 @@ load_dotenv(Path(__file__).parent / ".env")
 app = FastAPI()
 
 # ========== Configuration ==========
-ENABLE_THINKING = False
+ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() == "true"
 
 UPSTREAMS = {
     "csu": {
@@ -29,6 +33,8 @@ UPSTREAMS = {
     },
 }
 PORT = int(os.getenv("PORT", "4000"))
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "300"))
+BIND_HOST = os.getenv("BIND_HOST", "0.0.0.0")
 
 # model name -> (upstream name, actual model name)
 MODEL_MAP = {
@@ -157,7 +163,9 @@ def anthropic_to_openai(body: dict) -> dict:
             messages.append({"role": role, "content": str(content)})
 
     req_model = body.get("model", DEFAULT_MODEL)
-    upstream_model = MODEL_MAP.get(req_model, req_model)
+    if req_model not in MODEL_MAP:
+        raise ValueError(f"Unknown model: {req_model}. Available: {', '.join(MODEL_MAP.keys())}")
+    upstream_name, upstream_model = MODEL_MAP[req_model]
 
     openai_req = {
         "model": upstream_model,
@@ -316,7 +324,7 @@ async def proxy(request: Request):
             )
         else:
             try:
-                async with httpx.AsyncClient(timeout=300) as client:
+                async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
                     resp = await client.post(url, json=body, headers=headers)
                     return JSONResponse(resp.json(), status_code=resp.status_code)
             except Exception as e:
@@ -334,7 +342,7 @@ async def proxy(request: Request):
             )
         else:
             try:
-                async with httpx.AsyncClient(timeout=300) as client:
+                async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
                     resp = await client.post(upstream["url"], json=openai_req, headers=headers)
                     openai_resp = resp.json()
                     anthropic_resp = openai_response_to_anthropic(openai_resp, model)
@@ -349,12 +357,19 @@ async def proxy(request: Request):
 async def anthropic_passthrough_stream(url: str, body: dict, headers: dict):
     """Anthropic 协议流式透传"""
     try:
-        async with httpx.AsyncClient(timeout=300) as client:
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
             async with client.stream("POST", url, json=body, headers=headers) as resp:
+                if resp.status_code >= 400:
+                    error_body = await resp.aread()
+                    logger.error(f"Anthropic upstream returned {resp.status_code}")
+                    err_data = json.dumps({"type": "error", "error": {"type": "api_error", "message": f"Upstream {resp.status_code}: {error_body.decode()}"}})
+                    yield f"event: errordata: {err_data}\n\n"
+                    return
                 async for line in resp.aiter_lines():
                     if line:
                         yield line + "\n"
     except Exception as e:
+        logger.error(f"Anthropic passthrough error: {e}")
         yield f"event: error\ndata: {json.dumps({'type': 'error', 'error': {'type': 'api_error', 'message': str(e)}})}\n\n"
 
 
@@ -418,7 +433,7 @@ async def stream_handler(openai_req, model, headers, upstream_url):
         })
 
     try:
-        async with httpx.AsyncClient(timeout=300) as client:
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
             async with client.stream("POST", upstream_url, json=openai_req, headers=headers) as resp:
                 async for line in resp.aiter_lines():
                     if not line.startswith("data: "):
@@ -480,6 +495,7 @@ async def stream_handler(openai_req, model, headers, upstream_url):
                             })
 
     except Exception as e:
+        logger.error(f"Upstream error: {e}")
         for ev in start_text_block():
             yield ev
         yield make_sse("content_block_delta", {
@@ -504,6 +520,11 @@ async def stream_handler(openai_req, model, headers, upstream_url):
     yield make_sse("message_stop", {"type": "message_stop"})
 
 
+@app.get("/")
+async def health():
+    return {"status": "ok", "models": list(MODEL_MAP.keys())}
+
+
 @app.get("/v1/models")
 async def list_models():
     return {
@@ -516,4 +537,4 @@ if __name__ == "__main__":
     for name, cfg in UPSTREAMS.items():
         print(f"  [{name}] {cfg['url']} ({cfg['protocol']})")
     print(f"Models: {', '.join(MODEL_MAP.keys())}")
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    uvicorn.run(app, host=BIND_HOST, port=PORT)

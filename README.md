@@ -55,7 +55,12 @@ MIMO_URL=https://token-plan-cn.xiaomimimo.com/anthropic
 MIMO_KEY=tp-your-key-here
 
 PORT=4000
+ENABLE_THINKING=false
+REQUEST_TIMEOUT=300
+BIND_HOST=0.0.0.0
 ```
+
+> **注意**: 默认绑定 `0.0.0.0`（所有网卡）。如果在公网服务器上运行，建议设置 `BIND_HOST=127.0.0.1`。
 
 ### 3. 启动
 
