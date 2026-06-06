@@ -275,9 +275,31 @@ async def fetch_models(request: Request):
 
 # ── 启停控制 ───────────────────────────────────────────────────
 
+# 存储进程状态
+process_state = {
+    "bridge": None,
+    "claude": None,
+    "provider": None,
+    "model": None,
+}
+
+
+def _run_process(cmd, env, cwd):
+    """在新进程中运行命令"""
+    import subprocess
+    return subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        shell=True,
+    )
+
+
 @app.post("/api/start")
 async def start_bridge(request: Request):
-    global bridge_process, claude_process
+    global process_state
 
     form = await request.form()
     provider_id = form.get("provider", "csu")
@@ -296,19 +318,21 @@ async def start_bridge(request: Request):
     claude_env = os.environ.copy()
 
     if provider.get("requires_bridge"):
-        if bridge_process and bridge_process.poll() is None:
+        if process_state["bridge"] and process_state["bridge"].poll() is None:
             await log_broadcaster.publish("[GUI] Bridge 已在运行")
         else:
             await log_broadcaster.publish("[GUI] 启动 Bridge 服务...")
-            bridge_process = subprocess.Popen(
-                ["python", str(BASE_DIR / "server.py")],
-                cwd=str(BASE_DIR),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-            )
-            await asyncio.sleep(2)
-            await log_broadcaster.publish("[GUI] Bridge 已启动")
+            try:
+                process_state["bridge"] = _run_process(
+                    f"python {BASE_DIR / 'server.py'}",
+                    claude_env,
+                    str(BASE_DIR),
+                )
+                await asyncio.sleep(2)
+                await log_broadcaster.publish("[GUI] Bridge 已启动")
+            except Exception as e:
+                await log_broadcaster.publish(f"[GUI] Bridge 启动失败: {e}")
+                return JSONResponse({"error": f"Bridge 启动失败: {e}"}, status_code=500)
 
         claude_env["ANTHROPIC_BASE_URL"] = "http://localhost:4000"
     else:
@@ -319,37 +343,44 @@ async def start_bridge(request: Request):
 
     await log_broadcaster.publish(f"[GUI] 启动 Claude Code (模型: {model})...")
 
-    claude_process = subprocess.Popen(
-        ["claude", "--enable-auto-mode"],
-        cwd=str(BASE_DIR),
-        env=claude_env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-    )
+    try:
+        process_state["claude"] = _run_process(
+            "claude --permission-mode auto",
+            claude_env,
+            str(BASE_DIR),
+        )
+        process_state["provider"] = provider_id
+        process_state["model"] = model
+        await log_broadcaster.publish(f"[GUI] Claude Code 已启动 (PID: {process_state['claude'].pid})")
+    except Exception as e:
+        await log_broadcaster.publish(f"[GUI] Claude 启动失败: {e}")
+        return JSONResponse({"error": f"Claude 启动失败: {e}"}, status_code=500)
 
     return JSONResponse({
         "status": "started",
         "provider": provider_id,
         "model": model,
-        "pid": claude_process.pid,
+        "pid": process_state["claude"].pid,
     })
 
 
 @app.post("/api/stop")
 async def stop():
-    global bridge_process, claude_process
+    global process_state
     stopped = []
 
-    if claude_process and claude_process.poll() is None:
-        claude_process.terminate()
+    if process_state["claude"] and process_state["claude"].poll() is None:
+        process_state["claude"].terminate()
         stopped.append("Claude")
         await log_broadcaster.publish("[GUI] Claude Code 已停止")
 
-    if bridge_process and bridge_process.poll() is None:
-        bridge_process.terminate()
+    if process_state["bridge"] and process_state["bridge"].poll() is None:
+        process_state["bridge"].terminate()
         stopped.append("Bridge")
         await log_broadcaster.publish("[GUI] Bridge 已停止")
+
+    process_state["claude"] = None
+    process_state["bridge"] = None
 
     return JSONResponse({"stopped": stopped})
 
@@ -357,8 +388,10 @@ async def stop():
 @app.get("/api/status")
 async def status():
     return JSONResponse({
-        "bridge_running": bridge_process is not None and bridge_process.poll() is None,
-        "claude_running": claude_process is not None and claude_process.poll() is None,
+        "bridge_running": process_state["bridge"] is not None and process_state["bridge"].poll() is None,
+        "claude_running": process_state["claude"] is not None and process_state["claude"].poll() is None,
+        "provider": process_state["provider"],
+        "model": process_state["model"],
     })
 
 
