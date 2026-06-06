@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API Bridge 控制台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-primary: #0a0a0f;
+        --bg-secondary: #12121a;
+        --bg-card: #1a1a25;
+        --bg-input: #22222f;
+        --border: #2a2a3a;
+        --border-focus: #6366f1;
+        --text-primary: #e8e8ef;
+        --text-secondary: #8b8b9e;
+        --text-muted: #5a5a6e;
+        --accent: #6366f1;
+        --accent-hover: #7c7ff7;
+        --accent-glow: rgba(99, 102, 241, 0.3);
+        --success: #22c55e;
+        --success-bg: rgba(34, 197, 94, 0.1);
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --danger-bg: rgba(239, 68, 68, 0.1);
+        --radius: 12px;
+        --radius-sm: 8px;
+        --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 8px 48px rgba(0, 0, 0, 0.5);
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        line-height: 1.6;
+      }
+
+      /* Header */
+      .header {
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        padding: 0 32px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(12px);
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--accent), #a855f7);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 18px;
+        color: white;
+        letter-spacing: -1px;
+      }
+
+      .header-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .header-subtitle {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-left: 8px;
+        padding-left: 8px;
+        border-left: 1px solid var(--border);
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .status-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        background: var(--success-bg);
+        border: 1px solid rgba(34, 197, 94, 0.2);
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--success);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--success);
+        border-radius: 50%;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      /* Main Layout */
+      .main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      @media (max-width: 900px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+
+      /* Cards */
+      .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: border-color 0.2s;
+      }
+
+      .card:hover {
+        border-color: var(--border-focus);
+      }
+
+      .card-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .card-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .card-title svg {
+        width: 20px;
+        height: 20px;
+        color: var(--accent);
+      }
+
+      .card-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .card-badge.config {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--accent);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+      }
+
+      .card-badge.runtime {
+        background: var(--success-bg);
+        color: var(--success);
+        border: 1px solid rgba(34, 197, 94, 0.2);
+      }
+
+      .card-body {
+        padding: 24px;
+      }
+
+      /* Form Elements */
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      @media (max-width: 600px) {
+        .form-grid { grid-template-columns: 1fr; }
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .form-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .form-input {
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 10px 14px;
+        font-size: 14px;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+        transition: all 0.2s;
+        outline: none;
+      }
+
+      .form-input:focus {
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+      }
+
+      .form-input::placeholder {
+        color: var(--text-muted);
+      }
+
+      select.form-input {
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b8b9e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 36px;
+      }
+
+      .form-actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 12px;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: inherit;
+        border: none;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s;
+        outline: none;
+      }
+
+      .btn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px var(--accent-glow);
+      }
+
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+
+      .btn-secondary {
+        background: var(--bg-input);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+      }
+
+      .btn-secondary:hover {
+        background: var(--border);
+        color: var(--text-primary);
+      }
+
+      .btn-danger {
+        background: var(--danger-bg);
+        color: var(--danger);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+      }
+
+      .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.2);
+      }
+
+      /* Controls Section */
+      .controls {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .control-card {
+        flex: 1;
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .control-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .control-icon.start {
+        background: var(--success-bg);
+        color: var(--success);
+      }
+
+      .control-icon.stop {
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+
+      .control-icon svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      .control-label {
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+
+      /* Log Section */
+      .log-container {
+        background: #0d0d14;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+      }
+
+      .log-header {
+        padding: 10px 16px;
+        background: var(--bg-input);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .log-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .log-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: var(--success);
+      }
+
+      .log-indicator::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        background: var(--success);
+        border-radius: 50%;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      #logs {
+        height: 320px;
+        overflow: auto;
+        padding: 16px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        line-height: 1.8;
+        color: var(--text-secondary);
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+
+      #logs::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      #logs::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      #logs::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+
+      #logs::-webkit-scrollbar-thumb:hover {
+        background: var(--text-muted);
+      }
+
+      .log-line {
+        padding: 2px 0;
+      }
+
+      .log-line.error {
+        color: var(--danger);
+      }
+
+      .log-line.success {
+        color: var(--success);
+      }
+
+      .log-line.warning {
+        color: var(--warning);
+      }
+
+      .log-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--text-muted);
+        font-size: 13px;
+        gap: 8px;
+      }
+
+      .log-empty svg {
+        width: 32px;
+        height: 32px;
+        opacity: 0.5;
+      }
+
+      /* Model Selector Card */
+      .model-selector {
+        grid-column: 1 / -1;
+      }
+
+      .model-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px;
+      }
+
+      .model-option {
+        background: var(--bg-input);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+      }
+
+      .model-option:hover {
+        border-color: var(--accent);
+        background: rgba(99, 102, 241, 0.05);
+      }
+
+      .model-option.selected {
+        border-color: var(--accent);
+        background: rgba(99, 102, 241, 0.1);
+      }
+
+      .model-option input {
+        display: none;
+      }
+
+      .model-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+      }
+
+      .model-id {
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--text-muted);
+      }
+
+      /* Animations */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .card {
+        animation: fadeIn 0.4s ease-out;
+      }
+
+      .card:nth-child(2) { animation-delay: 0.1s; }
+      .card:nth-child(3) { animation-delay: 0.2s; }
+
+      /* Toast notification */
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: var(--bg-card);
+        border: 1px solid var(--success);
+        border-radius: var(--radius-sm);
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: var(--success);
+        box-shadow: var(--shadow-lg);
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s ease;
+        z-index: 1000;
+      }
+
+      .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      .toast svg {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">AB</div>
+        <span class="header-title">API Bridge</span>
+        <span class="header-subtitle">控制台</span>
+      </div>
+      <div class="header-right">
+        <div class="status-badge">
+          <span class="status-dot"></span>
+          就绪
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <form id="configForm" method="post" action="/save">
+        <div class="grid">
+          <!-- Config Card -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                服务配置
+              </span>
+              <span class="card-badge config">Config</span>
+            </div>
+            <div class="card-body">
+              <div class="form-grid">
+                {% for f in config_fields %}
+                <div class="form-group">
+                  <label class="form-label" for="{{ f.key }}">{{ f.label }}</label>
+                  <input class="form-input" id="{{ f.key }}" name="{{ f.key }}" value="{{ env.get(f.key, '') }}" placeholder="{{ f.label }}" />
+                </div>
+                {% endfor %}
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                  保存配置
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Runtime Card -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                运行控制
+              </span>
+              <span class="card-badge runtime">Runtime</span>
+            </div>
+            <div class="card-body">
+              <div class="controls">
+                <div class="control-card">
+                  <div class="control-icon start">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                  </div>
+                  <button type="button" id="startBtn" class="btn btn-primary" style="width: 100%;">
+                    启动 Bridge
+                  </button>
+                  <span class="control-label">启动 API 代理服务</span>
+                </div>
+                <div class="control-card">
+                  <div class="control-icon stop">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="6" y="4" width="4" height="16"></rect>
+                      <rect x="14" y="4" width="4" height="16"></rect>
+                    </svg>
+                  </div>
+                  <button type="button" id="stopBtn" class="btn btn-danger" style="width: 100%;">
+                    停止 Bridge
+                  </button>
+                  <span class="control-label">停止 API 代理服务</span>
+                </div>
+              </div>
+
+              <!-- Log Section -->
+              <div class="log-container">
+                <div class="log-header">
+                  <span class="log-title">实时日志</span>
+                  <span class="log-indicator">连接中</span>
+                </div>
+                <div id="logs">
+                  <div class="log-empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 17 10 11 4 5"></polyline>
+                      <line x1="12" y1="19" x2="20" y2="19"></line>
+                    </svg>
+                    等待日志输出...
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Model Selector Card -->
+          <div class="card model-selector">
+            <div class="card-header">
+              <span class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                默认模型
+              </span>
+            </div>
+            <div class="card-body">
+              <div class="model-grid">
+                {% for m in model_options %}
+                <label class="model-option {% if selected_model == m.id %}selected{% endif %}">
+                  <input type="radio" name="selected_model" value="{{ m.id }}" {% if selected_model == m.id %}checked{% endif %} />
+                  <div class="model-name">{{ m.label }}</div>
+                  <div class="model-id">{{ m.id }}</div>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </main>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <span id="toastMessage">配置已保存</span>
+    </div>
+
+    <script>
+      // Model selection
+      document.querySelectorAll('.model-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.model-option').forEach(o => o.classList.remove('selected'));
+          option.classList.add('selected');
+          option.querySelector('input').checked = true;
+        });
+      });
+
+      // WebSocket logs
+      const logs = document.getElementById('logs');
+      let ws = null;
+
+      function connectWS() {
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${location.host}/ws/logs`);
+
+        ws.onopen = () => {
+          logs.innerHTML = '';
+          addLog('已连接到日志服务', 'success');
+        };
+
+        ws.onmessage = (e) => {
+          addLog(e.data);
+        };
+
+        ws.onclose = () => {
+          addLog('连接断开，3秒后重连...', 'warning');
+          setTimeout(connectWS, 3000);
+        };
+
+        ws.onerror = () => {
+          addLog('连接错误', 'error');
+        };
+      }
+
+      function addLog(text, type = '') {
+        const empty = logs.querySelector('.log-empty');
+        if (empty) empty.remove();
+
+        const line = document.createElement('div');
+        line.className = `log-line ${type}`;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+        logs.appendChild(line);
+        logs.scrollTop = logs.scrollHeight;
+      }
+
+      // Start/Stop buttons
+      document.getElementById('startBtn').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/status');
+          const data = await res.json();
+          showToast('Bridge 就绪，请使用启动脚本运行');
+        } catch (e) {
+          showToast('无法获取状态', 'error');
+        }
+      });
+
+      document.getElementById('stopBtn').addEventListener('click', () => {
+        showToast('请关闭 Bridge 进程窗口', 'warning');
+      });
+
+      // Toast notification
+      function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const msg = document.getElementById('toastMessage');
+        msg.textContent = message;
+
+        if (type === 'error') {
+          toast.style.borderColor = 'var(--danger)';
+          toast.style.color = 'var(--danger)';
+        } else if (type === 'warning') {
+          toast.style.borderColor = 'var(--warning)';
+          toast.style.color = 'var(--warning)';
+        } else {
+          toast.style.borderColor = 'var(--success)';
+          toast.style.color = 'var(--success)';
+        }
+
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+      }
+
+      // Form submit with toast
+      document.getElementById('configForm').addEventListener('submit', (e) => {
+        showToast('正在保存配置...');
+      });
+
+      // Init
+      connectWS();
+    </script>
+  </body>
+</html>
