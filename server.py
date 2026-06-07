@@ -357,7 +357,7 @@ async def proxy(request: Request):
     }
 
     if protocol == "anthropic":
-        # Anthropic 协议：直接透传
+        # Anthropic 协议：URL 是基础部分如 /anthropic，拼接 /v1/messages
         url = f"{upstream['url']}/v1/messages"
         if body.get("stream"):
             return StreamingResponse(
@@ -375,17 +375,18 @@ async def proxy(request: Request):
                     status_code=500,
                 )
     else:
-        # OpenAI 协议：需要转换
+        # OpenAI 协议：URL 是基础部分如 /v1，拼接 /chat/completions
+        openai_url = f"{upstream['url']}/chat/completions"
         openai_req = anthropic_to_openai(body)
         if body.get("stream"):
             return StreamingResponse(
-                stream_handler(openai_req, model, headers, upstream["url"]),
+                stream_handler(openai_req, model, headers, openai_url),
                 media_type="text/event-stream",
             )
         else:
             try:
                 async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-                    resp = await client.post(upstream["url"], json=openai_req, headers=headers)
+                    resp = await client.post(openai_url, json=openai_req, headers=headers)
                     openai_resp = resp.json()
                     logger.info(f"[OpenAI resp] {json.dumps(openai_resp, ensure_ascii=False)[:500]}")
                     anthropic_resp = openai_response_to_anthropic(openai_resp, model)

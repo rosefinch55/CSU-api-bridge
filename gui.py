@@ -231,7 +231,7 @@ async def fetch_models(request: Request):
     if not url:
         return JSONResponse({"error": "请先配置 URL"}, status_code=400)
 
-    # 尝试拉取模型列表
+    # URL 已经是基础部分（如 /v1），直接拼接 endpoint
     models_url = url + endpoint
     headers = {}
     if key:
