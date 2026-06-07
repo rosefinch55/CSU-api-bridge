@@ -742,39 +742,40 @@
       });
 
       // Add model manually
-      $$('.add-model-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const providerId = btn.dataset.provider;
-          const input = $(`#manualModel-${providerId}`);
-          const modelName = input.value.trim();
-          if (!modelName) { showToast('请输入模型名称', 'error'); return; }
+      // Add model (事件委托)
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.add-model-btn');
+        if (!btn) return;
+        const providerId = btn.dataset.provider;
+        const input = $(`#manualModel-${providerId}`);
+        const modelName = input.value.trim();
+        if (!modelName) { showToast('请输入模型名称', 'error'); return; }
 
-          const form = new FormData();
-          form.append('provider', providerId);
-          form.append('model_id', modelName);
-          form.append('model_label', modelName);
+        const form = new FormData();
+        form.append('provider', providerId);
+        form.append('model_id', modelName);
+        form.append('model_label', modelName);
 
-          try {
-            const res = await fetch('/api/models/add', { method: 'POST', body: form });
-            const data = await res.json();
-            if (data.error) showToast(data.error, 'error');
-            else {
-              // 动态添加模型 chip 到 UI
-              const grid = $(`.provider-config[data-provider="${providerId}"] .model-grid`);
-              const label = document.createElement('label');
-              label.className = 'model-chip';
-              label.innerHTML = `<input type="radio" name="model" value="${data.model.id}"> ${data.model.label}`;
-              label.addEventListener('click', () => {
-                grid.querySelectorAll('.model-chip').forEach(c => c.classList.remove('selected'));
-                label.classList.add('selected');
-                label.querySelector('input').checked = true;
-              });
-              grid.appendChild(label);
-              input.value = '';
-              showToast('已添加模型');
-            }
-          } catch (e) { showToast('添加失败', 'error'); }
-        });
+        try {
+          const res = await fetch('/api/models/add', { method: 'POST', body: form });
+          const data = await res.json();
+          if (data.error) showToast(data.error, 'error');
+          else {
+            // 动态添加模型 chip 到 UI
+            const grid = $(`.provider-config[data-provider="${providerId}"] .model-grid`);
+            const label = document.createElement('label');
+            label.className = 'model-chip';
+            label.innerHTML = `<input type="radio" name="model" value="${data.model.id}"> ${data.model.label}`;
+            label.addEventListener('click', () => {
+              grid.querySelectorAll('.model-chip').forEach(c => c.classList.remove('selected'));
+              label.classList.add('selected');
+              label.querySelector('input').checked = true;
+            });
+            grid.appendChild(label);
+            input.value = '';
+            showToast('已添加模型');
+          }
+        } catch (e) { showToast('添加失败', 'error'); }
       });
 
       // Delete model
@@ -816,35 +817,35 @@
         $('#providerModal').classList.add('show');
       });
 
-      // Edit provider
-      $$('.edit-provider-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.provider;
+      // Edit provider (事件委托)
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.edit-provider-btn');
+        if (!btn) return;
+        const id = btn.dataset.provider;
 
-          try {
-            const res = await fetch(`/api/provider/${id}`);
-            const data = await res.json();
-            if (data.error) {
-              showToast(data.error, 'error');
-              return;
-            }
-
-            $('#modalTitle').textContent = '编辑厂商';
-            $('#modalProviderId').value = id;
-            $('#modalId').value = id;
-            $('#modalId').disabled = true;
-            $('#modalName').value = data.name || id;
-            $('#modalDesc').value = data.description || '';
-            $('#modalUrl').value = data.url || '';
-            $('#modalKey').value = data.key || '';
-            $('#modalEndpoint').value = data.models_endpoint || '';
-            $('#modalCwd').value = data.cwd || '';
-            $('#modalBridge').checked = data.requires_bridge || false;
-            $('#providerModal').classList.add('show');
-          } catch (e) {
-            showToast('获取厂商信息失败', 'error');
+        try {
+          const res = await fetch(`/api/provider/${id}`);
+          const data = await res.json();
+          if (data.error) {
+            showToast(data.error, 'error');
+            return;
           }
-        });
+
+          $('#modalTitle').textContent = '编辑厂商';
+          $('#modalProviderId').value = id;
+          $('#modalId').value = id;
+          $('#modalId').disabled = true;
+          $('#modalName').value = data.name || id;
+          $('#modalDesc').value = data.description || '';
+          $('#modalUrl').value = data.url || '';
+          $('#modalKey').value = data.key || '';
+          $('#modalEndpoint').value = data.models_endpoint || '';
+          $('#modalCwd').value = data.cwd || '';
+          $('#modalBridge').checked = data.requires_bridge || false;
+          $('#providerModal').classList.add('show');
+        } catch (e) {
+          showToast('获取厂商信息失败', 'error');
+        }
       });
 
       // Delete provider (事件委托)
