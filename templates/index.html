@@ -550,7 +550,10 @@
                   <span class="value" id="stClaude">-</span>
                 </div>
               </div>
-              <button type="button" id="stopBtn" class="btn btn-danger btn-block" style="margin-top:14px;">停止全部</button>
+              <div style="display:flex;gap:8px;margin-top:14px;">
+                <button type="button" id="stopBridgeBtn" class="btn btn-secondary" style="flex:1;">停止 Bridge</button>
+                <button type="button" id="stopClaudeBtn" class="btn btn-danger" style="flex:1;">停止 Claude</button>
+              </div>
             </div>
           </div>
 
@@ -778,11 +781,22 @@
         } catch (e) { showToast('启动失败', 'error'); }
       });
 
-      // Stop
-      $('#stopBtn').addEventListener('click', async () => {
-        const res = await fetch('/api/stop', { method: 'POST' });
+      // Stop Bridge
+      $('#stopBridgeBtn').addEventListener('click', async () => {
+        const res = await fetch('/api/stop/bridge', { method: 'POST' });
         const data = await res.json();
-        showToast(`已停止: ${data.stopped.join(', ') || '无'}`);
+        if (data.status === 'stopped') showToast('Bridge 已停止');
+        else showToast('Bridge 未运行');
+        updateStatus();
+      });
+
+      // Stop Claude
+      $('#stopClaudeBtn').addEventListener('click', async () => {
+        if (!confirm('停止 Claude 会终止当前会话，确定吗？')) return;
+        const res = await fetch('/api/stop/claude', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'stopped') showToast('Claude 已停止');
+        else showToast('Claude 未运行');
         updateStatus();
       });
 

@@ -334,6 +334,19 @@ def _is_claude_running():
         return False
 
 
+def _kill_claude():
+    """停止所有 claude 进程"""
+    try:
+        subprocess.run(
+            ["taskkill", "/F", "/IM", "claude.exe"],
+            capture_output=True,
+            shell=True,
+        )
+        return True
+    except Exception:
+        return False
+
+
 @app.post("/api/start")
 async def start_bridge(request: Request):
     global process_state
@@ -412,23 +425,25 @@ async def start_bridge(request: Request):
     })
 
 
-@app.post("/api/stop")
-async def stop():
+@app.post("/api/stop/bridge")
+async def stop_bridge():
     global process_state
-    stopped = []
-
-    # 只停止 Bridge，不杀 claude（会误杀当前会话）
     if process_state["bridge"] and process_state["bridge"].poll() is None:
         process_state["bridge"].terminate()
-        stopped.append("Bridge")
+        process_state["bridge"] = None
         await log_broadcaster.publish("[GUI] Bridge 已停止")
+        return JSONResponse({"status": "stopped", "service": "bridge"})
+    return JSONResponse({"status": "not_running", "service": "bridge"})
 
-    process_state["bridge"] = None
 
-    if not stopped:
-        await log_broadcaster.publish("[GUI] 没有可停止的服务（Claude 需手动关闭窗口）")
-
-    return JSONResponse({"stopped": stopped})
+@app.post("/api/stop/claude")
+async def stop_claude():
+    if _is_claude_running():
+        await log_broadcaster.publish("[GUI] 正在停止 Claude Code...")
+        _kill_claude()
+        await log_broadcaster.publish("[GUI] Claude Code 已停止")
+        return JSONResponse({"status": "stopped", "service": "claude"})
+    return JSONResponse({"status": "not_running", "service": "claude"})
 
 
 @app.get("/api/status")
