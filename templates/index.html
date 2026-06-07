@@ -503,17 +503,17 @@
                   <div class="provider-config" data-provider="{{ id }}" style="display:{% if selected_provider == id %}block{% else %}none{% endif %}">
                     <div class="form-group">
                       <label class="form-label">API URL</label>
-                      <input class="form-input" name="url" value="{{ p.get('url', '') }}" placeholder="https://api.example.com/v1">
+                      <input class="form-input" name="url" value="{{ p.get('url', '') }}" placeholder="https://api.example.com/v1" readonly>
                     </div>
                     <div class="form-group">
                       <label class="form-label">API Key</label>
-                      <input class="form-input" name="key" type="password" value="{{ p.get('key', '') }}" placeholder="sk-...">
+                      <input class="form-input" name="key" type="password" value="{{ p.get('key', '') }}" placeholder="sk-..." readonly>
                     </div>
                     <div class="form-group">
                       <label class="form-label">模型列表端点（用于自动拉取）</label>
                       <div class="form-row">
-                        <input class="form-input" name="models_endpoint" value="{{ p.get('models_endpoint', '') }}" placeholder="/models">
-                        <button type="button" class="btn btn-secondary btn-sm fetch-models-btn" data-provider="{{ id }}">
+                        <input class="form-input" name="models_endpoint" value="{{ p.get('models_endpoint', '') }}" placeholder="/models" readonly>
+                        <button type="button" class="btn btn-secondary btn-sm fetch-models-btn" data-provider="{{ id }}" disabled>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                           拉取
                         </button>
@@ -521,7 +521,7 @@
                     </div>
                     <div class="form-group">
                       <label class="form-label">工作目录（Claude 启动位置）</label>
-                      <input class="form-input" name="cwd" value="{{ p.get('cwd', '') }}" placeholder="留空则使用默认目录">
+                      <input class="form-input" name="cwd" value="{{ p.get('cwd', '') }}" placeholder="留空则使用默认目录" readonly>
                     </div>
 
                     <div class="form-label">模型</div>
@@ -659,6 +659,13 @@
     <script>
       const $ = s => document.querySelector(s);
       const $$ = s => document.querySelectorAll(s);
+
+      // Trim all form inputs on submit
+      $('#configForm').addEventListener('submit', () => {
+        $$('#configForm input:not([type="hidden"]):not([type="radio"]):not([type="password"])').forEach(input => {
+          input.value = input.value.trim();
+        });
+      });
 
       // Provider tab switching
       $$('.provider-tab[data-id]').forEach(tab => {
