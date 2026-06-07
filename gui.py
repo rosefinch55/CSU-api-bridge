@@ -355,8 +355,8 @@ def _run_bridge(cmd, env, cwd):
         cmd,
         cwd=cwd,
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
         shell=True,
     )
 
