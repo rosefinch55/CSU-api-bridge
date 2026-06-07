@@ -128,7 +128,7 @@ def anthropic_to_openai(body: dict) -> dict:
             system_text = system
         messages.append({"role": "system", "content": system_text})
 
-    for msg in body.get("messages", []):
+    for msg in (body.get("messages") or []):
         role = msg["role"]
         content = msg.get("content", "")
 
