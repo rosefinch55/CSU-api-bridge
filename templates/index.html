@@ -489,6 +489,10 @@
                         </button>
                       </div>
                     </div>
+                    <div class="form-group">
+                      <label class="form-label">工作目录（Claude 启动位置）</label>
+                      <input class="form-input" name="cwd" value="{{ p.get('cwd', '') }}" placeholder="留空则使用默认目录">
+                    </div>
 
                     <div class="form-label">模型</div>
                     <div class="model-grid">
@@ -594,6 +598,10 @@
           <label class="form-label">模型端点</label>
           <input class="form-input" id="modalEndpoint" placeholder="/models（留空则不支持拉取）">
         </div>
+        <div class="form-group">
+          <label class="form-label">工作目录</label>
+          <input class="form-input" id="modalCwd" placeholder="Claude 启动位置，留空用默认">
+        </div>
         <div class="checkbox-group">
           <input type="checkbox" id="modalBridge">
           <label for="modalBridge">需要本地 Bridge 代理</label>
@@ -690,6 +698,7 @@
           $('#modalUrl').value = config.querySelector('[name="url"]').value;
           $('#modalKey').value = config.querySelector('[name="key"]').value;
           $('#modalEndpoint').value = config.querySelector('[name="models_endpoint"]').value;
+          $('#modalCwd').value = config.querySelector('[name="cwd"]') ? config.querySelector('[name="cwd"]').value : '';
           $('#modalBridge').checked = false;
           $('#providerModal').classList.add('show');
         });
@@ -721,6 +730,7 @@
         form.append('url', $('#modalUrl').value);
         form.append('key', $('#modalKey').value);
         form.append('models_endpoint', $('#modalEndpoint').value);
+        form.append('cwd', $('#modalCwd').value);
         form.append('requires_bridge', $('#modalBridge').checked ? 'true' : 'false');
 
         try {

@@ -167,6 +167,7 @@ async def create_provider(request: Request):
         "url": form.get("url", ""),
         "key": form.get("key", ""),
         "models_endpoint": form.get("models_endpoint", ""),
+        "cwd": form.get("cwd", ""),
         "models": [],
     }
     save_providers(providers)
@@ -188,6 +189,7 @@ async def update_provider(request: Request):
     p["url"] = form.get("url", p["url"])
     p["key"] = form.get("key", p["key"])
     p["models_endpoint"] = form.get("models_endpoint", p.get("models_endpoint", ""))
+    p["cwd"] = form.get("cwd", p.get("cwd", ""))
     save_providers(providers)
     return JSONResponse({"status": "ok"})
 
@@ -278,15 +280,13 @@ async def fetch_models(request: Request):
 # 存储进程状态
 process_state = {
     "bridge": None,
-    "claude": None,
     "provider": None,
     "model": None,
 }
 
 
-def _run_process(cmd, env, cwd):
-    """在新进程中运行命令"""
-    import subprocess
+def _run_bridge(cmd, env, cwd):
+    """启动 Bridge 进程"""
     return subprocess.Popen(
         cmd,
         cwd=cwd,
@@ -295,6 +295,52 @@ def _run_process(cmd, env, cwd):
         stderr=subprocess.STDOUT,
         shell=True,
     )
+
+
+def _start_claude(env, cwd):
+    """在新窗口启动 Claude（Windows start 命令）"""
+    # 构建环境变量设置命令
+    env_cmds = []
+    for key in ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_MODEL"]:
+        if key in env:
+            env_cmds.append(f"set {key}={env[key]}")
+
+    env_str = " && ".join(env_cmds)
+    cmd = f'start "Claude Code" cmd /c "{env_str} && claude --permission-mode auto"'
+
+    proc = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        shell=True,
+    )
+    return proc
+
+
+def _is_claude_running():
+    """检查 claude 进程是否在运行"""
+    try:
+        result = subprocess.run(
+            ["tasklist", "/FI", "IMAGENAME eq claude.exe"],
+            capture_output=True,
+            text=True,
+            shell=True,
+        )
+        return "claude.exe" in result.stdout
+    except Exception:
+        return False
+
+
+def _kill_claude():
+    """停止所有 claude 进程"""
+    try:
+        subprocess.run(
+            ["taskkill", "/F", "/IM", "claude.exe"],
+            capture_output=True,
+            shell=True,
+        )
+        return True
+    except Exception:
+        return False
 
 
 @app.post("/api/start")
@@ -323,7 +369,7 @@ async def start_bridge(request: Request):
         else:
             await log_broadcaster.publish("[GUI] 启动 Bridge 服务...")
             try:
-                process_state["bridge"] = _run_process(
+                process_state["bridge"] = _run_bridge(
                     f"python {BASE_DIR / 'server.py'}",
                     claude_env,
                     str(BASE_DIR),
@@ -341,17 +387,24 @@ async def start_bridge(request: Request):
     claude_env["ANTHROPIC_AUTH_TOKEN"] = provider.get("key", "")
     claude_env["ANTHROPIC_MODEL"] = model
 
-    await log_broadcaster.publish(f"[GUI] 启动 Claude Code (模型: {model})...")
+    # 使用用户设置的工作目录，否则用 BASE_DIR
+    cwd = provider.get("cwd", "").strip()
+    if not cwd:
+        cwd = str(BASE_DIR)
+
+    await log_broadcaster.publish(f"[GUI] 启动 Claude Code (模型: {model}, 目录: {cwd})...")
 
     try:
-        process_state["claude"] = _run_process(
-            "claude --permission-mode auto",
-            claude_env,
-            str(BASE_DIR),
-        )
+        _start_claude(claude_env, cwd)
         process_state["provider"] = provider_id
         process_state["model"] = model
-        await log_broadcaster.publish(f"[GUI] Claude Code 已启动 (PID: {process_state['claude'].pid})")
+        await asyncio.sleep(3)  # 等待进程启动
+
+        if _is_claude_running():
+            await log_broadcaster.publish("[GUI] Claude Code 已启动")
+        else:
+            await log_broadcaster.publish("[GUI] Claude Code 启动失败，进程未运行")
+            return JSONResponse({"error": "Claude 启动失败"}, status_code=500)
     except Exception as e:
         await log_broadcaster.publish(f"[GUI] Claude 启动失败: {e}")
         return JSONResponse({"error": f"Claude 启动失败: {e}"}, status_code=500)
@@ -360,7 +413,6 @@ async def start_bridge(request: Request):
         "status": "started",
         "provider": provider_id,
         "model": model,
-        "pid": process_state["claude"].pid,
     })
 
 
@@ -369,8 +421,8 @@ async def stop():
     global process_state
     stopped = []
 
-    if process_state["claude"] and process_state["claude"].poll() is None:
-        process_state["claude"].terminate()
+    if _is_claude_running():
+        _kill_claude()
         stopped.append("Claude")
         await log_broadcaster.publish("[GUI] Claude Code 已停止")
 
@@ -379,7 +431,6 @@ async def stop():
         stopped.append("Bridge")
         await log_broadcaster.publish("[GUI] Bridge 已停止")
 
-    process_state["claude"] = None
     process_state["bridge"] = None
 
     return JSONResponse({"stopped": stopped})
@@ -389,7 +440,7 @@ async def stop():
 async def status():
     return JSONResponse({
         "bridge_running": process_state["bridge"] is not None and process_state["bridge"].poll() is None,
-        "claude_running": process_state["claude"] is not None and process_state["claude"].poll() is None,
+        "claude_running": _is_claude_running(),
         "provider": process_state["provider"],
         "model": process_state["model"],
     })
