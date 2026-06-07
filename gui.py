@@ -202,9 +202,6 @@ async def update_provider(request: Request):
     p["name"] = form.get("name", p["name"])
     p["description"] = form.get("description", p["description"])
     p["url"] = form.get("url", p["url"])
-    key = form.get("key", "").strip()
-    if key:
-        p["key"] = key
     p["models_endpoint"] = form.get("models_endpoint", p.get("models_endpoint", ""))
     p["cwd"] = form.get("cwd", p.get("cwd", ""))
     save_providers(providers)
