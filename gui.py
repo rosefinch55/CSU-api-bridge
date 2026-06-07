@@ -146,7 +146,9 @@ async def save(request: Request):
     providers = load_providers()
     if provider_id in providers:
         providers[provider_id]["url"] = str(form.get("url", ""))
-        providers[provider_id]["key"] = str(form.get("key", ""))
+        key = str(form.get("key", "")).strip()
+        if key:
+            providers[provider_id]["key"] = key
         providers[provider_id]["models_endpoint"] = str(form.get("models_endpoint", ""))
         providers[provider_id]["cwd"] = str(form.get("cwd", ""))
         save_providers(providers)
