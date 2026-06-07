@@ -4,7 +4,7 @@
     "description": "通过本地 Bridge 代理连接",
     "requires_bridge": true,
     "url": "https://api.chat.csu.edu.cn/v1",
-    "key": "",
+    "key": "sk-xaBFFevDMTyUMiC94LMrpuJ3wq4ftvHjtJcFoxkdBjtkvT2m",
     "models_endpoint": "/models",
     "cwd": "E:\\cc",
     "models": [
@@ -27,7 +27,7 @@
     "description": "直连",
     "requires_bridge": false,
     "url": "https://token-plan-cn.xiaomimimo.com/anthropic",
-    "key": "",
+    "key": "tp-czicpog6v24c6kuv4db5wbguzrd5rhmgkbeqy8oxp8kaqxkf",
     "models_endpoint": "/models",
     "cwd": "E:\\cc",
     "models": [
