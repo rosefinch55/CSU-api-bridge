@@ -396,11 +396,6 @@ async def start_bridge(request: Request):
     if not cwd:
         cwd = str(BASE_DIR)
 
-    # 检查是否已有 claude 在运行
-    if _is_claude_running():
-        await log_broadcaster.publish("[GUI] 检测到已有 Claude 进程在运行")
-        return JSONResponse({"error": "已有 Claude 进程在运行，请先手动停止"}, status_code=400)
-
     await log_broadcaster.publish(f"[GUI] 启动 Claude Code (模型: {model}, 目录: {cwd})...")
 
     try:
