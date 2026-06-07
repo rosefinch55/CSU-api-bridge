@@ -3,7 +3,7 @@
     "name": "CSU 大学云",
     "description": "通过本地 Bridge 代理连接",
     "requires_bridge": true,
-    "url": "https://token-plan-cn.xiaomimimo.com/anthropic",
+    "url": "https://api.chat.csu.edu.cn/v1",
     "key": "",
     "models_endpoint": "/models",
     "cwd": "E:\\cc",
