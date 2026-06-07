@@ -19,7 +19,10 @@ app = FastAPI()
 
 # ========== Configuration ==========
 ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() == "true"
+BASE_DIR = Path(__file__).resolve().parent
+PROVIDERS_PATH = BASE_DIR / "providers.json"
 
+# 从 .env 读取配置
 UPSTREAMS = {
     "csu": {
         "url": os.getenv("CSU_URL", "https://api.chat.csu.edu.cn/v1/chat/completions"),
@@ -36,20 +39,48 @@ PORT = int(os.getenv("PORT", "4000"))
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "300"))
 BIND_HOST = os.getenv("BIND_HOST", "0.0.0.0")
 
-# model name -> (upstream name, actual model name)
-MODEL_MAP = {
-    "csu-deepseek[1m]": ("csu", "DeepSeek-V4-Flash"),
-    "csu-deepseek": ("csu", "DeepSeek-V4-Flash"),
-    "csu-deepseek-thinking[1m]": ("csu", "DeepSeek-V4-Flash"),
-    "csu-deepseek-thinking": ("csu", "DeepSeek-V4-Flash"),
-    "csu-qwen[256k]": ("csu", "Qwen3.6-35B-A3B"),
-    "csu-qwen": ("csu", "Qwen3.6-35B-A3B"),
-    "mimo-v2.5-pro[1m]": ("mimo", "mimo-v2.5-pro"),
-    "mimo-v2.5-pro": ("mimo", "mimo-v2.5-pro"),
-    "mimo-v2.5[1m]": ("mimo", "mimo-v2.5"),
-    "mimo-v2.5": ("mimo", "mimo-v2.5"),
-}
-DEFAULT_MODEL = "csu-deepseek"
+
+def load_providers() -> dict:
+    """从 providers.json 加载厂商配置"""
+    if PROVIDERS_PATH.exists():
+        try:
+            return json.loads(PROVIDERS_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+def build_model_map() -> dict:
+    """从 providers.json 动态构建 MODEL_MAP"""
+    model_map = {}
+    providers = load_providers()
+
+    for provider_id, provider in providers.items():
+        if provider_id not in UPSTREAMS:
+            continue
+        for model in provider.get("models", []):
+            model_id = model["id"]
+            model_map[model_id] = (provider_id, model_id)
+
+    # 兼容旧名称
+    legacy_map = {
+        "csu-deepseek[1m]": ("csu", "DeepSeek-V4-Flash"),
+        "csu-deepseek": ("csu", "DeepSeek-V4-Flash"),
+        "csu-deepseek-thinking[1m]": ("csu", "DeepSeek-V4-Flash"),
+        "csu-deepseek-thinking": ("csu", "DeepSeek-V4-Flash"),
+        "csu-qwen[256k]": ("csu", "Qwen3.6-35B-A3B"),
+        "csu-qwen": ("csu", "Qwen3.6-35B-A3B"),
+        "mimo-v2.5-pro[1m]": ("mimo", "mimo-v2.5-pro"),
+        "mimo-v2.5[1m]": ("mimo", "mimo-v2.5"),
+    }
+    model_map.update(legacy_map)
+
+    return model_map
+
+
+# 动态构建 MODEL_MAP
+MODEL_MAP = build_model_map()
+DEFAULT_MODEL = list(MODEL_MAP.keys())[0] if MODEL_MAP else "deepseek-v3"
 # ===================================
 
 
@@ -283,11 +314,6 @@ def openai_response_to_anthropic(openai_resp: dict, model: str) -> dict:
 
 def make_sse(event_type: str, data: dict) -> str:
     return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
-
-
-@app.get("/")
-async def health():
-    return {"status": "ok", "models": list(MODEL_MAP.keys())}
 
 
 @app.post("/v1/messages")
