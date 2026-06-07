@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+httpx
+aiohttp
+python-dotenv
+jinja2
