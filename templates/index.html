@@ -503,12 +503,12 @@
                   <div class="provider-config" data-provider="{{ id }}" style="display:{% if selected_provider == id %}block{% else %}none{% endif %}">
                     <div class="form-group">
                       <label class="form-label">API URL</label>
-                      <input class="form-input" name="url" value="{{ p.get('url', '') }}" placeholder="https://api.example.com/v1" readonly>
+                      <input class="form-input" name="url_{{ id }}" value="{{ p.get('url', '') }}" placeholder="https://api.example.com/v1" readonly>
                     </div>
                     <div class="form-group">
                       <label class="form-label">API Key{% if p.get('_env_key') %} <span style="color:var(--text-muted);font-size:11px;">(来自 .env)</span>{% endif %}</label>
                       <div class="form-row">
-                        <input class="form-input" name="key" type="password" value="{{ p.get('key') or p.get('_env_key', '') }}" placeholder="sk-..." readonly style="margin:0;">
+                        <input class="form-input" name="key_{{ id }}" type="password" value="{{ p.get('key') or p.get('_env_key', '') }}" placeholder="sk-..." readonly style="margin:0;">
                         <button type="button" class="btn btn-secondary btn-sm toggle-key-btn" title="显示/隐藏">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
@@ -517,7 +517,7 @@
                     <div class="form-group">
                       <label class="form-label">模型列表端点（用于自动拉取）</label>
                       <div class="form-row">
-                        <input class="form-input" name="models_endpoint" value="{{ p.get('models_endpoint', '') }}" placeholder="/models" readonly>
+                        <input class="form-input" name="models_endpoint_{{ id }}" value="{{ p.get('models_endpoint', '') }}" placeholder="/models" readonly>
                         <button type="button" class="btn btn-secondary btn-sm fetch-models-btn" data-provider="{{ id }}">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                           拉取
@@ -526,7 +526,7 @@
                     </div>
                     <div class="form-group">
                       <label class="form-label">工作目录（Claude 启动位置）</label>
-                      <input class="form-input" name="cwd" value="{{ p.get('cwd', '') }}" placeholder="留空则使用默认目录" readonly>
+                      <input class="form-input" name="cwd_{{ id }}" value="{{ p.get('cwd', '') }}" placeholder="留空则使用默认目录" readonly>
                     </div>
 
                     <div class="form-label">模型</div>
@@ -697,7 +697,7 @@
       document.addEventListener('click', e => {
         const btn = e.target.closest('.toggle-key-btn');
         if (!btn) return;
-        const input = btn.parentElement.querySelector('input[name="key"]');
+        const input = btn.parentElement.querySelector('input[type="password"], input[type="text"]');
         input.type = input.type === 'password' ? 'text' : 'password';
       });
 
@@ -923,16 +923,16 @@
               newConfig.innerHTML = `
                 <div class="form-group">
                   <label class="form-label">API URL</label>
-                  <input class="form-input" name="url" value="${$('#modalUrl').value}" placeholder="https://api.example.com/v1">
+                  <input class="form-input" name="url_${newId}" value="${$('#modalUrl').value}" placeholder="https://api.example.com/v1">
                 </div>
                 <div class="form-group">
                   <label class="form-label">API Key</label>
-                  <input class="form-input" name="key" type="password" value="${$('#modalKey').value}" placeholder="sk-...">
+                  <input class="form-input" name="key_${newId}" type="password" value="${$('#modalKey').value}" placeholder="sk-...">
                 </div>
                 <div class="form-group">
                   <label class="form-label">模型列表端点（用于自动拉取）</label>
                   <div class="form-row">
-                    <input class="form-input" name="models_endpoint" value="${$('#modalEndpoint').value}" placeholder="/models">
+                    <input class="form-input" name="models_endpoint_${newId}" value="${$('#modalEndpoint').value}" placeholder="/models">
                     <button type="button" class="btn btn-secondary btn-sm fetch-models-btn" data-provider="${newId}">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                       拉取
@@ -941,7 +941,7 @@
                 </div>
                 <div class="form-group">
                   <label class="form-label">工作目录（Claude 启动位置）</label>
-                  <input class="form-input" name="cwd" value="${$('#modalCwd').value}" placeholder="留空则使用默认目录">
+                  <input class="form-input" name="cwd_${newId}" value="${$('#modalCwd').value}" placeholder="留空则使用默认目录">
                 </div>
                 <div class="form-label">模型</div>
                 <div class="model-grid"></div>

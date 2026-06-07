@@ -149,15 +149,15 @@ async def save(request: Request):
         "GUI_SELECTED_MODEL": str(form.get("model", "")),
     }
 
-    # 保存厂商配置
+    # 保存厂商配置（字段名带厂商 ID 后缀，避免多厂商混淆）
     providers = load_providers()
     if provider_id in providers:
-        providers[provider_id]["url"] = str(form.get("url", ""))
-        key = str(form.get("key", "")).strip()
+        providers[provider_id]["url"] = str(form.get(f"url_{provider_id}", providers[provider_id].get("url", "")))
+        key = str(form.get(f"key_{provider_id}", "")).strip()
         if key and key != get_provider_key(providers[provider_id], provider_id):
             providers[provider_id]["key"] = key
-        providers[provider_id]["models_endpoint"] = str(form.get("models_endpoint", ""))
-        providers[provider_id]["cwd"] = str(form.get("cwd", ""))
+        providers[provider_id]["models_endpoint"] = str(form.get(f"models_endpoint_{provider_id}", ""))
+        providers[provider_id]["cwd"] = str(form.get(f"cwd_{provider_id}", ""))
         save_providers(providers)
 
     write_env(data)
@@ -417,6 +417,18 @@ def _is_claude_running():
         return False
 
 
+def _is_bridge_running():
+    """检查 bridge 是否在运行（进程或端口）"""
+    if process_state["bridge"] and process_state["bridge"].poll() is None:
+        return True
+    try:
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(("127.0.0.1", 4000)) == 0
+    except Exception:
+        return False
+
+
 def _kill_claude():
     """停止所有 claude 进程"""
     try:
@@ -451,7 +463,7 @@ async def start_bridge(request: Request):
     claude_env = os.environ.copy()
 
     if provider.get("requires_bridge"):
-        if process_state["bridge"] and process_state["bridge"].poll() is None:
+        if _is_bridge_running():
             await log_broadcaster.publish("[GUI] Bridge 已在运行")
         else:
             await log_broadcaster.publish("[GUI] 启动 Bridge 服务...")
@@ -527,7 +539,7 @@ async def stop_claude():
 @app.get("/api/status")
 async def status():
     return JSONResponse({
-        "bridge_running": process_state["bridge"] is not None and process_state["bridge"].poll() is None,
+        "bridge_running": _is_bridge_running(),
         "claude_running": _is_claude_running(),
         "provider": process_state["provider"],
         "model": process_state["model"],
