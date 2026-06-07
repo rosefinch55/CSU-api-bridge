@@ -22,23 +22,6 @@ ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() == "true"
 BASE_DIR = Path(__file__).resolve().parent
 PROVIDERS_PATH = BASE_DIR / "providers.json"
 
-# 从 .env 读取配置
-UPSTREAMS = {
-    "csu": {
-        "url": os.getenv("CSU_URL", "https://api.chat.csu.edu.cn/v1/chat/completions"),
-        "key": os.getenv("CSU_KEY", ""),
-        "protocol": "openai",
-    },
-    "mimo": {
-        "url": os.getenv("MIMO_URL", "https://token-plan-cn.xiaomimimo.com/anthropic"),
-        "key": os.getenv("MIMO_KEY", ""),
-        "protocol": "anthropic",
-    },
-}
-PORT = int(os.getenv("PORT", "4000"))
-REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "300"))
-BIND_HOST = os.getenv("BIND_HOST", "0.0.0.0")
-
 
 def load_providers() -> dict:
     """从 providers.json 加载厂商配置"""
@@ -48,6 +31,39 @@ def load_providers() -> dict:
         except Exception:
             pass
     return {}
+
+
+def build_upstreams() -> dict:
+    """从 providers.json 动态构建 UPSTREAMS"""
+    upstreams = {}
+    providers = load_providers()
+
+    for provider_id, provider in providers.items():
+        url = provider.get("url", "")
+        key = provider.get("key", "")
+        if not url:
+            continue
+
+        # 判断协议类型
+        if "anthropic" in url:
+            protocol = "anthropic"
+        else:
+            protocol = "openai"
+
+        upstreams[provider_id] = {
+            "url": url,
+            "key": key,
+            "protocol": protocol,
+        }
+
+    return upstreams
+
+
+# 动态构建 UPSTREAMS
+UPSTREAMS = build_upstreams()
+PORT = int(os.getenv("PORT", "4000"))
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "300"))
+BIND_HOST = os.getenv("BIND_HOST", "0.0.0.0")
 
 
 def build_model_map() -> dict:
@@ -371,6 +387,7 @@ async def proxy(request: Request):
                 async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
                     resp = await client.post(upstream["url"], json=openai_req, headers=headers)
                     openai_resp = resp.json()
+                    logger.info(f"[OpenAI resp] {json.dumps(openai_resp, ensure_ascii=False)[:500]}")
                     anthropic_resp = openai_response_to_anthropic(openai_resp, model)
                     return JSONResponse(anthropic_resp)
             except Exception as e:
