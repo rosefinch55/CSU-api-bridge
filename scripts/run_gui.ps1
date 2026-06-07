@@ -1,2 +1,0 @@
-cd "E:\claude-code?????\apibridge"
-python gui.py *> "E:\claude-code?????\apibridge\gui_run.log"
