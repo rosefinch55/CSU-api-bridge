@@ -78,10 +78,22 @@ log_broadcaster = LogBroadcaster()
 def load_providers() -> dict:
     if PROVIDERS_PATH.exists():
         try:
-            return json.loads(PROVIDERS_PATH.read_text(encoding="utf-8"))
+            providers = json.loads(PROVIDERS_PATH.read_text(encoding="utf-8"))
         except Exception as e:
             print(f"[GUI] providers.json 解析失败，使用默认配置: {e}")
-    return DEFAULT_PROVIDERS.copy()
+            providers = DEFAULT_PROVIDERS.copy()
+    else:
+        providers = DEFAULT_PROVIDERS.copy()
+
+    # key 为空时从 .env 读取（env var: {PROVIDER_ID}_KEY）
+    env = read_env()
+    for pid, p in providers.items():
+        if not p.get("key"):
+            env_key = f"{pid.upper()}_KEY"
+            if env_key in env:
+                p["key"] = env[env_key]
+
+    return providers
 
 
 def save_providers(providers: dict):

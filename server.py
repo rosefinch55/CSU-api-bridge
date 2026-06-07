@@ -25,12 +25,22 @@ PROVIDERS_PATH = BASE_DIR / "providers.json"
 
 def load_providers() -> dict:
     """从 providers.json 加载厂商配置"""
+    providers = {}
     if PROVIDERS_PATH.exists():
         try:
-            return json.loads(PROVIDERS_PATH.read_text(encoding="utf-8"))
+            providers = json.loads(PROVIDERS_PATH.read_text(encoding="utf-8"))
         except Exception:
             pass
-    return {}
+
+    # key 为空时从 .env 读取（env var: {PROVIDER_ID}_KEY）
+    for pid, p in providers.items():
+        if not p.get("key"):
+            env_key = f"{pid.upper()}_KEY"
+            env_val = os.getenv(env_key)
+            if env_val:
+                p["key"] = env_val
+
+    return providers
 
 
 def build_upstreams() -> dict:
