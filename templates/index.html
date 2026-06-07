@@ -664,8 +664,21 @@
             if (data.error) {
               showToast(data.error, 'error');
             } else {
+              // 动态更新模型列表
+              const grid = $(`.provider-config[data-provider="${provider}"] .model-grid`);
+              grid.innerHTML = '';
+              data.models.forEach(m => {
+                const label = document.createElement('label');
+                label.className = 'model-chip';
+                label.innerHTML = `<input type="radio" name="model" value="${m.id}"> ${m.label}`;
+                label.addEventListener('click', () => {
+                  grid.querySelectorAll('.model-chip').forEach(c => c.classList.remove('selected'));
+                  label.classList.add('selected');
+                  label.querySelector('input').checked = true;
+                });
+                grid.appendChild(label);
+              });
               showToast(`已拉取 ${data.models.length} 个模型`);
-              setTimeout(() => location.reload(), 500);
             }
           } catch (e) {
             showToast('拉取失败', 'error');
@@ -692,7 +705,21 @@
             const res = await fetch('/api/models/add', { method: 'POST', body: form });
             const data = await res.json();
             if (data.error) showToast(data.error, 'error');
-            else { showToast('已添加模型'); setTimeout(() => location.reload(), 500); }
+            else {
+              // 动态添加模型 chip 到 UI
+              const grid = $(`.provider-config[data-provider="${providerId}"] .model-grid`);
+              const label = document.createElement('label');
+              label.className = 'model-chip';
+              label.innerHTML = `<input type="radio" name="model" value="${data.model.id}"> ${data.model.label}`;
+              label.addEventListener('click', () => {
+                grid.querySelectorAll('.model-chip').forEach(c => c.classList.remove('selected'));
+                label.classList.add('selected');
+                label.querySelector('input').checked = true;
+              });
+              grid.appendChild(label);
+              input.value = '';
+              showToast('已添加模型');
+            }
           } catch (e) { showToast('添加失败', 'error'); }
         });
       });
@@ -748,12 +775,21 @@
       $$('.delete-provider-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           if (!confirm('确定删除此厂商？')) return;
+          const id = btn.dataset.provider;
           const form = new FormData();
-          form.append('id', btn.dataset.provider);
+          form.append('id', id);
           const res = await fetch('/api/provider/delete', { method: 'POST', body: form });
           const data = await res.json();
           if (data.error) showToast(data.error, 'error');
-          else { showToast('已删除'); setTimeout(() => location.reload(), 500); }
+          else {
+            // 动态移除 tab 和 config
+            $(`.provider-tab[data-id="${id}"]`)?.remove();
+            $(`.provider-config[data-provider="${id}"]`)?.remove();
+            // 切换到第一个可用的 tab
+            const firstTab = document.querySelector('.provider-tab[data-id]');
+            if (firstTab) firstTab.click();
+            showToast('已删除');
+          }
         });
       });
 
@@ -780,8 +816,73 @@
             showToast(data.error, 'error');
           } else {
             $('#providerModal').classList.remove('show');
+            if (isEdit) {
+              // 更新 tab 名称
+              const tab = $(`.provider-tab[data-id="${existingId}"]`);
+              if (tab) tab.textContent = $('#modalName').value;
+            } else {
+              // 添加新 tab
+              const newId = data.id;
+              const tabs = document.getElementById('providerTabs');
+              const addBtn = document.getElementById('addProviderBtn');
+              const newTab = document.createElement('div');
+              newTab.className = 'provider-tab';
+              newTab.dataset.id = newId;
+              newTab.textContent = $('#modalName').value;
+              newTab.addEventListener('click', () => {
+                $$('.provider-tab').forEach(t => t.classList.remove('active'));
+                newTab.classList.add('active');
+                $('#selectedProvider').value = newId;
+                $$('.provider-config').forEach(c => c.style.display = c.dataset.provider === newId ? 'block' : 'none');
+              });
+              tabs.insertBefore(newTab, addBtn);
+
+              // 添加新的 config div（简化版，只包含基本信息）
+              const providerFields = document.getElementById('providerFields');
+              const newConfig = document.createElement('div');
+              newConfig.className = 'provider-config';
+              newConfig.dataset.provider = newId;
+              newConfig.style.display = 'none';
+              newConfig.innerHTML = `
+                <div class="form-group">
+                  <label class="form-label">API URL</label>
+                  <input class="form-input" name="url" value="${$('#modalUrl').value}" placeholder="https://api.example.com/v1">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">API Key</label>
+                  <input class="form-input" name="key" type="password" value="${$('#modalKey').value}" placeholder="sk-...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">模型列表端点（用于自动拉取）</label>
+                  <div class="form-row">
+                    <input class="form-input" name="models_endpoint" value="${$('#modalEndpoint').value}" placeholder="/models">
+                    <button type="button" class="btn btn-secondary btn-sm fetch-models-btn" data-provider="${newId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                      拉取
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">工作目录（Claude 启动位置）</label>
+                  <input class="form-input" name="cwd" value="${$('#modalCwd').value}" placeholder="留空则使用默认目录">
+                </div>
+                <div class="form-label">模型</div>
+                <div class="model-grid"></div>
+                <div class="form-row" style="margin-bottom:14px;">
+                  <input class="form-input" id="manualModel-${newId}" placeholder="手动输入模型名称" style="margin:0;">
+                  <button type="button" class="btn btn-secondary btn-sm add-model-btn" data-provider="${newId}">添加</button>
+                </div>
+                <div style="display:flex;gap:6px;margin-bottom:14px;">
+                  <button type="button" class="btn btn-secondary btn-sm edit-provider-btn" data-provider="${newId}">编辑厂商</button>
+                  <button type="button" class="btn btn-danger btn-sm delete-provider-btn" data-provider="${newId}">删除</button>
+                </div>
+              `;
+              providerFields.appendChild(newConfig);
+
+              // 切换到新 tab
+              newTab.click();
+            }
             showToast(isEdit ? '已更新' : '已创建');
-            setTimeout(() => location.reload(), 500);
           }
         } catch (e) {
           showToast('操作失败', 'error');
