@@ -97,8 +97,9 @@ def get_provider_key(provider: dict, provider_id: str) -> str:
     key = provider.get("key", "").strip()
     if key:
         return key
+    env = read_env()
     env_key = f"{provider_id.upper()}_KEY"
-    return os.getenv(env_key, "")
+    return env.get(env_key, "")
 
 
 def save_providers(providers: dict):
