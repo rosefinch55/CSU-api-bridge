@@ -334,19 +334,6 @@ def _is_claude_running():
         return False
 
 
-def _kill_claude():
-    """停止所有 claude 进程（危险操作，需要用户确认）"""
-    try:
-        subprocess.run(
-            ["taskkill", "/F", "/IM", "claude.exe"],
-            capture_output=True,
-            shell=True,
-        )
-        return True
-    except Exception:
-        return False
-
-
 @app.post("/api/start")
 async def start_bridge(request: Request):
     global process_state
@@ -430,17 +417,16 @@ async def stop():
     global process_state
     stopped = []
 
-    if _is_claude_running():
-        _kill_claude()
-        stopped.append("Claude")
-        await log_broadcaster.publish("[GUI] Claude Code 已停止")
-
+    # 只停止 Bridge，不杀 claude（会误杀当前会话）
     if process_state["bridge"] and process_state["bridge"].poll() is None:
         process_state["bridge"].terminate()
         stopped.append("Bridge")
         await log_broadcaster.publish("[GUI] Bridge 已停止")
 
     process_state["bridge"] = None
+
+    if not stopped:
+        await log_broadcaster.publish("[GUI] 没有可停止的服务（Claude 需手动关闭窗口）")
 
     return JSONResponse({"stopped": stopped})
 
