@@ -408,7 +408,7 @@ async def anthropic_passthrough_stream(url: str, body: dict, headers: dict):
                     error_body = await resp.aread()
                     logger.error(f"Anthropic upstream returned {resp.status_code}")
                     err_data = json.dumps({"type": "error", "error": {"type": "api_error", "message": f"Upstream {resp.status_code}: {error_body.decode()}"}})
-                    yield f"event: errordata: {err_data}\n\n"
+                    yield f"event: error\ndata: {err_data}\n\n"
                     return
                 async for line in resp.aiter_lines():
                     if line:
