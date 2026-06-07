@@ -258,6 +258,36 @@
 
       .model-chip input { display: none; }
 
+      .model-chip-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .model-delete-btn {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--danger);
+        color: white;
+        border: 2px solid var(--bg-card);
+        font-size: 10px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .15s;
+      }
+
+      .model-delete-btn:hover {
+        background: #dc2626;
+        transform: scale(1.1);
+      }
+
       /* Buttons */
       .btn {
         display: inline-flex;
@@ -497,10 +527,13 @@
                     <div class="form-label">模型</div>
                     <div class="model-grid">
                       {% for m in p.get('models', []) %}
-                      <label class="model-chip {% if selected_model == m.id %}selected{% endif %}">
-                        <input type="radio" name="model" value="{{ m.id }}" {% if selected_model == m.id %}checked{% endif %}>
-                        {{ m.label }}
-                      </label>
+                      <div class="model-chip-wrapper">
+                        <label class="model-chip {% if selected_model == m.id %}selected{% endif %}">
+                          <input type="radio" name="model" value="{{ m.id }}" {% if selected_model == m.id %}checked{% endif %}>
+                          {{ m.label }}
+                        </label>
+                        <button type="button" class="model-delete-btn" data-provider="{{ id }}" data-model="{{ m.id }}" title="删除">×</button>
+                      </div>
                       {% endfor %}
                     </div>
                     <div class="form-row" style="margin-bottom:14px;">
@@ -722,6 +755,29 @@
             }
           } catch (e) { showToast('添加失败', 'error'); }
         });
+      });
+
+      // Delete model
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.model-delete-btn');
+        if (!btn) return;
+
+        const providerId = btn.dataset.provider;
+        const modelId = btn.dataset.model;
+
+        const form = new FormData();
+        form.append('provider', providerId);
+        form.append('model_id', modelId);
+
+        try {
+          const res = await fetch('/api/models/delete', { method: 'POST', body: form });
+          const data = await res.json();
+          if (data.error) showToast(data.error, 'error');
+          else {
+            btn.closest('.model-chip-wrapper').remove();
+            showToast('已删除模型');
+          }
+        } catch (e) { showToast('删除失败', 'error'); }
       });
 
       // Add provider

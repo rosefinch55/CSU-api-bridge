@@ -309,6 +309,36 @@ async def add_model(request: Request):
     return JSONResponse({"status": "ok", "model": {"id": model_id, "label": model_label}})
 
 
+@app.post("/api/models/delete")
+async def delete_model(request: Request):
+    form = await request.form()
+    provider_id = form.get("provider", "")
+    model_id = form.get("model_id", "").strip()
+
+    if not provider_id or not model_id:
+        return JSONResponse({"error": "厂商 ID 和模型名称不能为空"}, status_code=400)
+
+    providers = load_providers()
+    if provider_id not in providers:
+        return JSONResponse({"error": "厂商不存在"}, status_code=404)
+
+    p = providers[provider_id]
+    if "models" not in p:
+        p["models"] = []
+
+    # 查找并删除
+    original_len = len(p["models"])
+    p["models"] = [m for m in p["models"] if m["id"] != model_id]
+
+    if len(p["models"]) == original_len:
+        return JSONResponse({"error": "模型不存在"}, status_code=404)
+
+    save_providers(providers)
+
+    await log_broadcaster.publish(f"[GUI] 已删除模型: {model_id}")
+    return JSONResponse({"status": "ok"})
+
+
 # ── 启停控制 ───────────────────────────────────────────────────
 
 # 存储进程状态
