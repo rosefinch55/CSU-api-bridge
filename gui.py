@@ -224,9 +224,9 @@ async def fetch_models(request: Request):
         return JSONResponse({"error": "厂商不存在"}, status_code=404)
 
     p = providers[provider_id]
-    url = p.get("url", "").rstrip("/")
-    key = p.get("key", "")
-    endpoint = p.get("models_endpoint", "/models")
+    url = p.get("url", "").strip().rstrip("/")
+    key = p.get("key", "").strip()
+    endpoint = p.get("models_endpoint", "/models").strip()
 
     if not url:
         return JSONResponse({"error": "请先配置 URL"}, status_code=400)
