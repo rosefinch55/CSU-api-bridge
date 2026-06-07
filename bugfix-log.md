@@ -43,6 +43,15 @@
 
 ---
 
+## 改进项
+
+| # | 描述 | 状态 | 提交 |
+|---|------|------|------|
+| 1 | API key 从 providers.json 外置到 .env | ✅ 已完成 | f0d4274 |
+| 2 | 添加 requirements.txt | ✅ 已完成 | 3ec6d9f |
+
+---
+
 ## 测试结果
 
 ### server.py 测试（Python 单元测试）
@@ -52,6 +61,13 @@
 | #1 tool_calls null | `openai_response_to_anthropic` 传入 tool_calls=None | ✅ 通过 |
 | #4 choices null | `openai_response_to_anthropic` 传入 choices=None | ✅ 通过 |
 | messages null 防御 | `anthropic_to_openai` 传入 messages=None | ✅ 通过 |
+
+### 改进项测试
+
+| 改进 | 测试方法 | 结果 |
+|------|----------|------|
+| #1 key 外置 | providers.json key 为空，server.py load_providers 读取 .env | ✅ CSU/MIMO key 均从 .env 正确读取 |
+| #2 requirements.txt | `pip install -r requirements.txt` | ✅ 安装成功，无报错 |
 
 ### 前端测试（Playwright 自动化）
 
