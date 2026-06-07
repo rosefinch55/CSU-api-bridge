@@ -763,6 +763,8 @@
           else {
             // 动态添加模型 chip 到 UI
             const grid = $(`.provider-config[data-provider="${providerId}"] .model-grid`);
+            const wrapper = document.createElement('div');
+            wrapper.className = 'model-chip-wrapper';
             const label = document.createElement('label');
             label.className = 'model-chip';
             label.innerHTML = `<input type="radio" name="model" value="${data.model.id}"> ${data.model.label}`;
@@ -771,7 +773,16 @@
               label.classList.add('selected');
               label.querySelector('input').checked = true;
             });
-            grid.appendChild(label);
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'model-delete-btn';
+            delBtn.dataset.provider = providerId;
+            delBtn.dataset.model = data.model.id;
+            delBtn.title = '删除';
+            delBtn.textContent = '×';
+            wrapper.appendChild(label);
+            wrapper.appendChild(delBtn);
+            grid.appendChild(wrapper);
             input.value = '';
             showToast('已添加模型');
           }
@@ -893,6 +904,8 @@
             showToast(data.error, 'error');
           } else {
             $('#providerModal').classList.remove('show');
+            location.reload();
+            return;
             if (isEdit) {
               // 更新 tab 名称
               const tab = $(`.provider-tab[data-id="${existingId}"]`);
