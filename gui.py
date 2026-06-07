@@ -84,16 +84,16 @@ def load_providers() -> dict:
             providers = DEFAULT_PROVIDERS.copy()
     else:
         providers = DEFAULT_PROVIDERS.copy()
-
-    # key 为空时从 .env 读取（env var: {PROVIDER_ID}_KEY）
-    env = read_env()
-    for pid, p in providers.items():
-        if not p.get("key"):
-            env_key = f"{pid.upper()}_KEY"
-            if env_key in env:
-                p["key"] = env[env_key]
-
     return providers
+
+
+def get_provider_key(provider: dict, provider_id: str) -> str:
+    """获取 API key：优先 providers.json，fallback 到 .env"""
+    key = provider.get("key", "").strip()
+    if key:
+        return key
+    env_key = f"{provider_id.upper()}_KEY"
+    return os.getenv(env_key, "")
 
 
 def save_providers(providers: dict):
@@ -119,6 +119,13 @@ async def index(request: Request):
     providers = load_providers()
     selected_provider = env.get("GUI_SELECTED_PROVIDER", "csu")
     selected_model = env.get("GUI_SELECTED_MODEL", "")
+
+    # 填充 .env key 用于显示
+    for pid, p in providers.items():
+        if not p.get("key"):
+            p["_env_key"] = get_provider_key(p, pid)
+        else:
+            p["_env_key"] = ""
 
     return templates.TemplateResponse(
         "index.html",
@@ -147,7 +154,7 @@ async def save(request: Request):
     if provider_id in providers:
         providers[provider_id]["url"] = str(form.get("url", ""))
         key = str(form.get("key", "")).strip()
-        if key:
+        if key and key != get_provider_key(providers[provider_id], provider_id):
             providers[provider_id]["key"] = key
         providers[provider_id]["models_endpoint"] = str(form.get("models_endpoint", ""))
         providers[provider_id]["cwd"] = str(form.get("cwd", ""))
@@ -198,7 +205,7 @@ async def update_provider(request: Request):
     p["description"] = form.get("description", p["description"])
     p["url"] = form.get("url", p["url"])
     key = form.get("key", "").strip()
-    if key:
+    if key and key != get_provider_key(p, provider_id):
         p["key"] = key
     p["models_endpoint"] = form.get("models_endpoint", p.get("models_endpoint", ""))
     p["cwd"] = form.get("cwd", p.get("cwd", ""))
@@ -464,7 +471,7 @@ async def start_bridge(request: Request):
     else:
         claude_env["ANTHROPIC_BASE_URL"] = provider.get("url", "")
 
-    claude_env["ANTHROPIC_AUTH_TOKEN"] = provider.get("key", "")
+    claude_env["ANTHROPIC_AUTH_TOKEN"] = get_provider_key(provider, provider_id)
     claude_env["ANTHROPIC_MODEL"] = model
 
     # 使用用户设置的工作目录，否则用 BASE_DIR

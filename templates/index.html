@@ -506,9 +506,9 @@
                       <input class="form-input" name="url" value="{{ p.get('url', '') }}" placeholder="https://api.example.com/v1" readonly>
                     </div>
                     <div class="form-group">
-                      <label class="form-label">API Key</label>
+                      <label class="form-label">API Key{% if p.get('_env_key') %} <span style="color:var(--text-muted);font-size:11px;">(来自 .env)</span>{% endif %}</label>
                       <div class="form-row">
-                        <input class="form-input" name="key" type="password" value="{{ p.get('key', '') }}" placeholder="sk-..." readonly style="margin:0;">
+                        <input class="form-input" name="key" type="password" value="{{ p.get('key') or p.get('_env_key', '') }}" placeholder="sk-..." readonly style="margin:0;">
                         <button type="button" class="btn btn-secondary btn-sm toggle-key-btn" title="显示/隐藏">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>

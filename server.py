@@ -24,23 +24,23 @@ PROVIDERS_PATH = BASE_DIR / "providers.json"
 
 
 def load_providers() -> dict:
-    """从 providers.json 加载厂商配置"""
+    """从 providers.json 加载厂商配置（不填充 .env key）"""
     providers = {}
     if PROVIDERS_PATH.exists():
         try:
             providers = json.loads(PROVIDERS_PATH.read_text(encoding="utf-8"))
         except Exception:
             pass
-
-    # key 为空时从 .env 读取（env var: {PROVIDER_ID}_KEY）
-    for pid, p in providers.items():
-        if not p.get("key"):
-            env_key = f"{pid.upper()}_KEY"
-            env_val = os.getenv(env_key)
-            if env_val:
-                p["key"] = env_val
-
     return providers
+
+
+def get_provider_key(provider: dict, provider_id: str) -> str:
+    """获取 API key：优先 providers.json，fallback 到 .env"""
+    key = provider.get("key", "").strip()
+    if key:
+        return key
+    env_key = f"{provider_id.upper()}_KEY"
+    return os.getenv(env_key, "")
 
 
 def build_upstreams() -> dict:
@@ -50,7 +50,7 @@ def build_upstreams() -> dict:
 
     for provider_id, provider in providers.items():
         url = provider.get("url", "")
-        key = provider.get("key", "")
+        key = get_provider_key(provider, provider_id)
         if not url:
             continue
 
