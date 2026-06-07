@@ -268,7 +268,8 @@ def anthropic_to_openai(body: dict) -> dict:
 
 def openai_response_to_anthropic(openai_resp: dict, model: str) -> dict:
     """OpenAI chat completion → Anthropic message"""
-    choice = openai_resp.get("choices", [{}])[0]
+    choices = openai_resp.get("choices") or [{}]
+    choice = choices[0]
     msg = choice.get("message", {})
     finish = choice.get("finish_reason", "stop")
 
@@ -285,7 +286,7 @@ def openai_response_to_anthropic(openai_resp: dict, model: str) -> dict:
         content_blocks.append({"type": "text", "text": text})
 
     # 工具调用
-    tool_calls = msg.get("tool_calls", [])
+    tool_calls = msg.get("tool_calls") or []
     for tc in tool_calls:
         func = tc.get("function", {})
         try:
@@ -521,7 +522,7 @@ async def stream_handler(openai_req, model, headers, upstream_url):
                         })
 
                     # 工具调用增量
-                    for tc_delta in delta.get("tool_calls", []):
+                    for tc_delta in (delta.get("tool_calls") or []):
                         tc_idx = tc_delta.get("index", 0)
                         if tc_idx not in tool_calls_buf:
                             tc_id = tc_delta.get("id", f"toolu_{uuid.uuid4().hex[:24]}")
