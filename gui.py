@@ -79,8 +79,8 @@ def load_providers() -> dict:
     if PROVIDERS_PATH.exists():
         try:
             return json.loads(PROVIDERS_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[GUI] providers.json 解析失败，使用默认配置: {e}")
     return DEFAULT_PROVIDERS.copy()
 
 
