@@ -847,26 +847,26 @@
         });
       });
 
-      // Delete provider
-      $$('.delete-provider-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('确定删除此厂商？')) return;
-          const id = btn.dataset.provider;
-          const form = new FormData();
-          form.append('id', id);
-          const res = await fetch('/api/provider/delete', { method: 'POST', body: form });
-          const data = await res.json();
-          if (data.error) showToast(data.error, 'error');
-          else {
-            // 动态移除 tab 和 config
-            $(`.provider-tab[data-id="${id}"]`)?.remove();
-            $(`.provider-config[data-provider="${id}"]`)?.remove();
-            // 切换到第一个可用的 tab
-            const firstTab = document.querySelector('.provider-tab[data-id]');
-            if (firstTab) firstTab.click();
-            showToast('已删除');
-          }
-        });
+      // Delete provider (事件委托)
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.delete-provider-btn');
+        if (!btn) return;
+        if (!confirm('确定删除此厂商？')) return;
+        const id = btn.dataset.provider;
+        const form = new FormData();
+        form.append('id', id);
+        const res = await fetch('/api/provider/delete', { method: 'POST', body: form });
+        const data = await res.json();
+        if (data.error) showToast(data.error, 'error');
+        else {
+          // 动态移除 tab 和 config
+          $(`.provider-tab[data-id="${id}"]`)?.remove();
+          $(`.provider-config[data-provider="${id}"]`)?.remove();
+          // 切换到第一个可用的 tab
+          const firstTab = document.querySelector('.provider-tab[data-id]');
+          if (firstTab) firstTab.click();
+          showToast('已删除');
+        }
       });
 
       // Modal save
