@@ -2,9 +2,11 @@
 
 Claude Code CLI 协议桥接服务。接收 Anthropic 格式请求，转发到任意后端 API。
 
+**核心服务：CSU 大学云**（硬编码，必须走本地 Bridge 代理）。
+
 ## 两种模式
 
-### 1. OpenAI 兼容 → Anthropic（以 CSU 为例）
+### 1. OpenAI 兼容 → Anthropic（CSU）
 
 适用于 OpenAI 兼容接口（DeepSeek、Qwen、vLLM 等）。
 
@@ -18,7 +20,7 @@ Claude Code  →  apibridge  →  CSU (OpenAI 协议)
 - 工具定义转换（input_schema → parameters）
 - 流式 SSE 增量同步
 
-### 2. Anthropic 直传（以小米为例）
+### 2. Anthropic 直传（小米）
 
 适用于原生 Anthropic 兼容接口（小米 mimo、第三方代理等）。
 
@@ -34,31 +36,27 @@ Claude Code  →  apibridge  →  小米 mimo (Anthropic 协议)
 ### 1. 安装依赖
 
 ```bash
-pip install fastapi uvicorn httpx python-dotenv aiohttp jinja2
+pip install -r requirements.txt
 ```
 
 ### 2. 配置
 
-复制 `.env.example` 为 `.env`，填入你的 API key：
-
-```bash
-cp .env.example .env
-```
-
-编辑 `.env`：
+创建 `.env` 文件，填入 API key：
 
 ```env
-CSU_URL=https://api.chat.csu.edu.cn/v1/chat/completions
 CSU_KEY=sk-your-key-here
-
-MIMO_URL=https://token-plan-cn.xiaomimimo.com/anthropic
 MIMO_KEY=tp-your-key-here
 
 PORT=4000
+GUI_PORT=4100
 ENABLE_THINKING=false
 REQUEST_TIMEOUT=300
 BIND_HOST=0.0.0.0
+GUI_SELECTED_PROVIDER=csu
+GUI_SELECTED_MODEL=DeepSeek-V4-Flash
 ```
+
+> **安全提示**：API key 只存在 `.env` 中，`providers.json` 不存储 key（已加入 `.gitignore`）。
 
 > **注意**: 默认绑定 `0.0.0.0`（所有网卡）。如果在公网服务器上运行，建议设置 `BIND_HOST=127.0.0.1`。
 
@@ -67,24 +65,17 @@ BIND_HOST=0.0.0.0
 #### 命令行模式
 
 ```bash
-# CSU DeepSeek（OpenAI 转换模式）
+# CSU DeepSeek
 scripts/start-csu.bat
 
-# CSU DeepSeek Thinking（推理模式）
-scripts/start-csu-thinking.bat
-
-# CSU Qwen（OpenAI 转换模式）
+# CSU Qwen
 scripts/start-csu-qwen.bat
 
-# 小米 mimo v2.5-pro（直传模式）
+# 小米 mimo
 scripts/start-mimo.bat
-
-# 小米 mimo v2.5（直传模式）
-scripts/start-xiaomi.bat
 ```
 
 CSU 系列脚本会自动启动 bridge 服务（端口 4000），然后启动 Claude Code。
-小米系列直连，不经过 bridge。
 
 #### GUI 模式
 
@@ -92,29 +83,28 @@ CSU 系列脚本会自动启动 bridge 服务（端口 4000），然后启动 Cl
 scripts/start-gui.bat
 ```
 
-启动 Web 控制台 `http://localhost:4000`，支持：
+启动 Web 控制台 `http://localhost:4100`，支持：
 - 可视化配置厂商和模型
 - 一键拉取模型列表
 - 启停 Bridge 和 Claude
 - 实时日志查看
+- API Key 从 `.env` 读取，编辑厂商时可设置新 key
 
 ## 项目结构
 
 ```
 apibridge/
-├── server.py          # Bridge 服务端
-├── gui.py             # Web 控制台后端
-├── providers.json     # 厂商配置（自动生成）
-├── .env               # 环境变量配置
-├── .env.example       # 配置模板
+├── server.py          # Bridge 服务端（端口 4000）
+├── gui.py             # Web 控制台后端（端口 4100）
+├── providers.json     # 厂商配置（自动生成，不上传 git）
+├── .env               # 环境变量和 API key（不上传 git）
+├── requirements.txt   # Python 依赖
 ├── templates/
 │   └── index.html     # 控制台前端
 └── scripts/
     ├── start-csu.bat
-    ├── start-csu-thinking.bat
     ├── start-csu-qwen.bat
     ├── start-mimo.bat
-    ├── start-xiaomi.bat
     └── start-gui.bat
 ```
 
@@ -125,7 +115,6 @@ apibridge/
 | `GET /` | 健康检查 |
 | `POST /v1/messages` | 主代理端点 |
 | `GET /v1/models` | 模型列表 |
-| `GET /gui` | Web 控制台 |
 
 ## License
 
