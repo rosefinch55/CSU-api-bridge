@@ -1,4 +1,4 @@
-﻿# API Bridge
+# API Bridge
 
 Claude Code CLI 协议桥接服务。接收 Anthropic 格式请求，转发到任意后端 API。
 
@@ -34,7 +34,7 @@ Claude Code  →  apibridge  →  小米 mimo (Anthropic 协议)
 ### 1. 安装依赖
 
 ```bash
-pip install fastapi uvicorn httpx python-dotenv
+pip install fastapi uvicorn httpx python-dotenv aiohttp jinja2
 ```
 
 ### 2. 配置
@@ -64,29 +64,59 @@ BIND_HOST=0.0.0.0
 
 ### 3. 启动
 
+#### 命令行模式
+
 ```bash
 # CSU DeepSeek（OpenAI 转换模式）
-start-csu.bat
+scripts/start-csu.bat
 
 # CSU DeepSeek Thinking（推理模式）
-start-csu-thinking.bat
+scripts/start-csu-thinking.bat
 
 # CSU Qwen（OpenAI 转换模式）
-start-csu-qwen.bat
+scripts/start-csu-qwen.bat
 
-# 小米 mimo v2.5-pro（直传模式，无需启动 bridge）
-start-mimo.bat
+# 小米 mimo v2.5-pro（直传模式）
+scripts/start-mimo.bat
 
-# 小米 mimo v2.5（直传模式，无需启动 bridge）
-start-xiaomi.bat
+# 小米 mimo v2.5（直传模式）
+scripts/start-xiaomi.bat
 ```
 
 CSU 系列脚本会自动启动 bridge 服务（端口 4000），然后启动 Claude Code。
 小米系列直连，不经过 bridge。
 
-## 如何添加后端
+#### GUI 模式
 
-编辑 `server.py` 中的 `MODEL_MAP` 添加模型映射，或在 `.env` 中配置新的上游地址。
+```bash
+scripts/start-gui.bat
+```
+
+启动 Web 控制台 `http://localhost:4000`，支持：
+- 可视化配置厂商和模型
+- 一键拉取模型列表
+- 启停 Bridge 和 Claude
+- 实时日志查看
+
+## 项目结构
+
+```
+apibridge/
+├── server.py          # Bridge 服务端
+├── gui.py             # Web 控制台后端
+├── providers.json     # 厂商配置（自动生成）
+├── .env               # 环境变量配置
+├── .env.example       # 配置模板
+├── templates/
+│   └── index.html     # 控制台前端
+└── scripts/
+    ├── start-csu.bat
+    ├── start-csu-thinking.bat
+    ├── start-csu-qwen.bat
+    ├── start-mimo.bat
+    ├── start-xiaomi.bat
+    └── start-gui.bat
+```
 
 ## 端点
 
@@ -95,12 +125,7 @@ CSU 系列脚本会自动启动 bridge 服务（端口 4000），然后启动 Cl
 | `GET /` | 健康检查 |
 | `POST /v1/messages` | 主代理端点 |
 | `GET /v1/models` | 模型列表 |
-
-## 依赖
-
-```bash
-pip install fastapi uvicorn httpx python-dotenv
-```
+| `GET /gui` | Web 控制台 |
 
 ## License
 
