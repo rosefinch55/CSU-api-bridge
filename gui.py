@@ -19,13 +19,18 @@ app = FastAPI(title="API Bridge GUI")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # 内置厂商（初始默认）
+# CSU 是核心服务，硬编码配置：
+#   - requires_bridge: CSU 只能通过本地 Bridge 代理连接
+#   - url: CSU API 地址
+#   - key: 必须为空！API key 只存在 .env 中（CSU_KEY=xxx），绝不能写入 providers.json
+#   - GUI 默认显示 CSU tab（通过 .env 中 GUI_SELECTED_PROVIDER=csu 控制）
 DEFAULT_PROVIDERS = {
     "csu": {
         "name": "CSU 大学云",
         "description": "通过本地 Bridge 代理连接",
-        "requires_bridge": True,
+        "requires_bridge": True,  # CSU 必须走桥接
         "url": "https://api.chat.csu.edu.cn/v1",
-        "key": "",
+        "key": "",  # 从 .env 读取 CSU_KEY
         "models_endpoint": "/models",
         "models": [
             {"id": "csu-deepseek", "label": "DeepSeek"},
@@ -38,7 +43,7 @@ DEFAULT_PROVIDERS = {
         "description": "直连小米 API",
         "requires_bridge": False,
         "url": "https://token-plan-cn.xiaomimimo.com/anthropic",
-        "key": "",
+        "key": "",  # 从 .env 读取 MIMO_KEY
         "models_endpoint": "",
         "models": [
             {"id": "mimo-v2.5-pro", "label": "Mimo v2.5 Pro"},
