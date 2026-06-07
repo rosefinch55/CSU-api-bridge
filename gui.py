@@ -150,12 +150,10 @@ async def save(request: Request):
     }
 
     # 保存厂商配置（字段名带厂商 ID 后缀，避免多厂商混淆）
+    # 注意：key 不在这里保存，只通过编辑厂商 modal 保存
     providers = load_providers()
     if provider_id in providers:
         providers[provider_id]["url"] = str(form.get(f"url_{provider_id}", providers[provider_id].get("url", "")))
-        key = str(form.get(f"key_{provider_id}", "")).strip()
-        if key and key != get_provider_key(providers[provider_id], provider_id):
-            providers[provider_id]["key"] = key
         providers[provider_id]["models_endpoint"] = str(form.get(f"models_endpoint_{provider_id}", ""))
         providers[provider_id]["cwd"] = str(form.get(f"cwd_{provider_id}", ""))
         save_providers(providers)
@@ -205,7 +203,7 @@ async def update_provider(request: Request):
     p["description"] = form.get("description", p["description"])
     p["url"] = form.get("url", p["url"])
     key = form.get("key", "").strip()
-    if key and key != get_provider_key(p, provider_id):
+    if key:
         p["key"] = key
     p["models_endpoint"] = form.get("models_endpoint", p.get("models_endpoint", ""))
     p["cwd"] = form.get("cwd", p.get("cwd", ""))

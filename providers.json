@@ -9,28 +9,16 @@
     "cwd": "E:\\cc",
     "models": [
       {
-        "id": "bge-m3",
-        "label": "bge-m3"
-      },
-      {
-        "id": "bge-reranker-large",
-        "label": "bge-reranker-large"
-      },
-      {
-        "id": "deepseek-v3",
-        "label": "deepseek-v3"
-      },
-      {
-        "id": "deepseek-v3-thinking",
-        "label": "deepseek-v3-thinking"
-      },
-      {
         "id": "DeepSeek-V4-Flash",
         "label": "DeepSeek-V4-Flash"
       },
       {
         "id": "Qwen3.6-35B-A3B",
         "label": "Qwen3.6-35B-A3B"
+      },
+      {
+        "id": "DeepSeek-V4-Flash[1m]",
+        "label": "DeepSeek-V4-Flash[1m]"
       }
     ]
   },
@@ -50,6 +38,10 @@
       {
         "id": "mimo-v2.5-pro",
         "label": "mimo-v2.5-pro"
+      },
+      {
+        "id": "mimo-v2.5-pro[1m]",
+        "label": "mimo-v2.5-pro[1m]"
       }
     ]
   }
