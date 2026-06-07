@@ -701,44 +701,44 @@
         input.type = input.type === 'password' ? 'text' : 'password';
       });
 
-      // Fetch models
-      $$('.fetch-models-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const provider = btn.dataset.provider;
-          btn.disabled = true;
-          btn.textContent = '拉取中...';
+      // Fetch models (事件委托)
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.fetch-models-btn');
+        if (!btn) return;
+        const provider = btn.dataset.provider;
+        btn.disabled = true;
+        btn.textContent = '拉取中...';
 
-          const form = new FormData();
-          form.append('provider', provider);
+        const form = new FormData();
+        form.append('provider', provider);
 
-          try {
-            const res = await fetch('/api/models/fetch', { method: 'POST', body: form });
-            const data = await res.json();
-            if (data.error) {
-              showToast(data.error, 'error');
-            } else {
-              // 动态更新模型列表
-              const grid = $(`.provider-config[data-provider="${provider}"] .model-grid`);
-              grid.innerHTML = '';
-              data.models.forEach(m => {
-                const label = document.createElement('label');
-                label.className = 'model-chip';
-                label.innerHTML = `<input type="radio" name="model" value="${m.id}"> ${m.label}`;
-                label.addEventListener('click', () => {
-                  grid.querySelectorAll('.model-chip').forEach(c => c.classList.remove('selected'));
-                  label.classList.add('selected');
-                  label.querySelector('input').checked = true;
-                });
-                grid.appendChild(label);
+        try {
+          const res = await fetch('/api/models/fetch', { method: 'POST', body: form });
+          const data = await res.json();
+          if (data.error) {
+            showToast(data.error, 'error');
+          } else {
+            // 动态更新模型列表
+            const grid = $(`.provider-config[data-provider="${provider}"] .model-grid`);
+            grid.innerHTML = '';
+            data.models.forEach(m => {
+              const label = document.createElement('label');
+              label.className = 'model-chip';
+              label.innerHTML = `<input type="radio" name="model" value="${m.id}"> ${m.label}`;
+              label.addEventListener('click', () => {
+                grid.querySelectorAll('.model-chip').forEach(c => c.classList.remove('selected'));
+                label.classList.add('selected');
+                label.querySelector('input').checked = true;
               });
-              showToast(`已拉取 ${data.models.length} 个模型`);
-            }
-          } catch (e) {
-            showToast('拉取失败', 'error');
+              grid.appendChild(label);
+            });
+            showToast(`已拉取 ${data.models.length} 个模型`);
           }
-          btn.disabled = false;
-          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> 拉取';
-        });
+        } catch (e) {
+          showToast('拉取失败', 'error');
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> 拉取';
       });
 
       // Add model manually
