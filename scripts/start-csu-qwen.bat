@@ -4,7 +4,7 @@ echo Starting API Bridge (CSU Qwen)...
 start "API Bridge" python server.py
 timeout /t 2 >nul
 set ANTHROPIC_BASE_URL=http://localhost:4000
-set ANTHROPIC_AUTH_TOKEN=sk-xaBFFevDMTyUMiC94LMrpuJ3wq4ftvHjtJcFoxkdBjtkvT2m
+set ANTHROPIC_AUTH_TOKEN=%CSU_KEY%
 set ANTHROPIC_MODEL=csu-qwen[256k]
-cd /d "E:\claude-code×¨ÓÃÎÄ¼þ¼Ð"
+cd /d "E:\claude-code×¨ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½"
 claude --enable-auto-mode
