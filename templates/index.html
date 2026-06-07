@@ -503,6 +503,10 @@
                       </label>
                       {% endfor %}
                     </div>
+                    <div class="form-row" style="margin-bottom:14px;">
+                      <input class="form-input" id="manualModel-{{ id }}" placeholder="手动输入模型名称" style="margin:0;">
+                      <button type="button" class="btn btn-secondary btn-sm add-model-btn" data-provider="{{ id }}">添加</button>
+                    </div>
 
                     <div style="display:flex;gap:6px;margin-bottom:14px;">
                       <button type="button" class="btn btn-secondary btn-sm edit-provider-btn" data-provider="{{ id }}">编辑厂商</button>
@@ -668,6 +672,28 @@
           }
           btn.disabled = false;
           btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> 拉取';
+        });
+      });
+
+      // Add model manually
+      $$('.add-model-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const providerId = btn.dataset.provider;
+          const input = $(`#manualModel-${providerId}`);
+          const modelName = input.value.trim();
+          if (!modelName) { showToast('请输入模型名称', 'error'); return; }
+
+          const form = new FormData();
+          form.append('provider', providerId);
+          form.append('model_id', modelName);
+          form.append('model_label', modelName);
+
+          try {
+            const res = await fetch('/api/models/add', { method: 'POST', body: form });
+            const data = await res.json();
+            if (data.error) showToast(data.error, 'error');
+            else { showToast('已添加模型'); setTimeout(() => location.reload(), 500); }
+          } catch (e) { showToast('添加失败', 'error'); }
         });
       });
 

@@ -279,6 +279,36 @@ async def fetch_models(request: Request):
     return JSONResponse({"models": model_list})
 
 
+@app.post("/api/models/add")
+async def add_model(request: Request):
+    form = await request.form()
+    provider_id = form.get("provider", "")
+    model_id = form.get("model_id", "").strip()
+    model_label = form.get("model_label", "").strip() or model_id
+
+    if not provider_id or not model_id:
+        return JSONResponse({"error": "厂商 ID 和模型名称不能为空"}, status_code=400)
+
+    providers = load_providers()
+    if provider_id not in providers:
+        return JSONResponse({"error": "厂商不存在"}, status_code=404)
+
+    p = providers[provider_id]
+    if "models" not in p:
+        p["models"] = []
+
+    # 检查是否已存在
+    existing_ids = [m["id"] for m in p["models"]]
+    if model_id in existing_ids:
+        return JSONResponse({"error": "模型已存在"}, status_code=400)
+
+    p["models"].append({"id": model_id, "label": model_label})
+    save_providers(providers)
+
+    await log_broadcaster.publish(f"[GUI] 已添加模型: {model_id}")
+    return JSONResponse({"status": "ok", "model": {"id": model_id, "label": model_label}})
+
+
 # ── 启停控制 ───────────────────────────────────────────────────
 
 # 存储进程状态
