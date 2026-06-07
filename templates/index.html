@@ -558,6 +558,7 @@
           <div class="card" style="flex:1;">
             <div class="card-header">
               <span class="card-title">日志</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="clearLogsBtn">清空</button>
             </div>
             <div class="card-body" style="padding:0;">
               <div class="log-box" id="logs">
@@ -678,6 +679,7 @@
         $('#modalUrl').value = '';
         $('#modalKey').value = '';
         $('#modalEndpoint').value = '/models';
+        $('#modalCwd').value = '';
         $('#modalBridge').checked = false;
         $('#providerModal').classList.add('show');
       });
@@ -686,21 +688,30 @@
       $$('.edit-provider-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const id = btn.dataset.provider;
-          const tab = $(`.provider-tab[data-id="${id}"]`);
-          const config = $(`.provider-config[data-provider="${id}"]`);
 
-          $('#modalTitle').textContent = '编辑厂商';
-          $('#modalProviderId').value = id;
-          $('#modalId').value = id;
-          $('#modalId').disabled = true;
-          $('#modalName').value = tab ? tab.textContent.trim() : id;
-          $('#modalDesc').value = '';
-          $('#modalUrl').value = config.querySelector('[name="url"]').value;
-          $('#modalKey').value = config.querySelector('[name="key"]').value;
-          $('#modalEndpoint').value = config.querySelector('[name="models_endpoint"]').value;
-          $('#modalCwd').value = config.querySelector('[name="cwd"]') ? config.querySelector('[name="cwd"]').value : '';
-          $('#modalBridge').checked = false;
-          $('#providerModal').classList.add('show');
+          try {
+            const res = await fetch(`/api/provider/${id}`);
+            const data = await res.json();
+            if (data.error) {
+              showToast(data.error, 'error');
+              return;
+            }
+
+            $('#modalTitle').textContent = '编辑厂商';
+            $('#modalProviderId').value = id;
+            $('#modalId').value = id;
+            $('#modalId').disabled = true;
+            $('#modalName').value = data.name || id;
+            $('#modalDesc').value = data.description || '';
+            $('#modalUrl').value = data.url || '';
+            $('#modalKey').value = data.key || '';
+            $('#modalEndpoint').value = data.models_endpoint || '';
+            $('#modalCwd').value = data.cwd || '';
+            $('#modalBridge').checked = data.requires_bridge || false;
+            $('#providerModal').classList.add('show');
+          } catch (e) {
+            showToast('获取厂商信息失败', 'error');
+          }
         });
       });
 
@@ -835,11 +846,16 @@
         setTimeout(() => t.classList.remove('show'), 3000);
       }
 
+      // Clear logs
+      $('#clearLogsBtn').addEventListener('click', () => {
+        logs.innerHTML = '<div class="log-empty">等待启动...</div>';
+      });
+
       // Init
       connectWS();
       updateStatus();
       updateStatusDisplay();
-      setInterval(updateStatus, 5000);
+      setInterval(updateStatus, 3000);
     </script>
   </body>
 </html>

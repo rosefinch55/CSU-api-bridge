@@ -135,13 +135,9 @@ async def save(request: Request):
     if provider_id in providers:
         providers[provider_id]["url"] = str(form.get("url", ""))
         providers[provider_id]["key"] = str(form.get("key", ""))
+        providers[provider_id]["models_endpoint"] = str(form.get("models_endpoint", ""))
+        providers[provider_id]["cwd"] = str(form.get("cwd", ""))
         save_providers(providers)
-
-    # 也写 env（兼容旧逻辑）
-    data["CSU_URL"] = str(form.get("url", "")) if provider_id == "csu" else read_env().get("CSU_URL", "")
-    data["CSU_KEY"] = str(form.get("key", "")) if provider_id == "csu" else read_env().get("CSU_KEY", "")
-    data["MIMO_URL"] = str(form.get("url", "")) if provider_id in ("mimo", "xiaomi") else read_env().get("MIMO_URL", "")
-    data["MIMO_KEY"] = str(form.get("key", "")) if provider_id in ("mimo", "xiaomi") else read_env().get("MIMO_KEY", "")
 
     write_env(data)
     return RedirectResponse("/", status_code=303)
@@ -206,6 +202,14 @@ async def delete_provider(request: Request):
     del providers[provider_id]
     save_providers(providers)
     return JSONResponse({"status": "ok"})
+
+
+@app.get("/api/provider/{provider_id}")
+async def get_provider(provider_id: str):
+    providers = load_providers()
+    if provider_id not in providers:
+        return JSONResponse({"error": "厂商不存在"}, status_code=404)
+    return JSONResponse(providers[provider_id])
 
 
 # ── 模型拉取 ───────────────────────────────────────────────────
@@ -331,7 +335,7 @@ def _is_claude_running():
 
 
 def _kill_claude():
-    """停止所有 claude 进程"""
+    """停止所有 claude 进程（危险操作，需要用户确认）"""
     try:
         subprocess.run(
             ["taskkill", "/F", "/IM", "claude.exe"],
@@ -391,6 +395,11 @@ async def start_bridge(request: Request):
     cwd = provider.get("cwd", "").strip()
     if not cwd:
         cwd = str(BASE_DIR)
+
+    # 检查是否已有 claude 在运行
+    if _is_claude_running():
+        await log_broadcaster.publish("[GUI] 检测到已有 Claude 进程在运行")
+        return JSONResponse({"error": "已有 Claude 进程在运行，请先手动停止"}, status_code=400)
 
     await log_broadcaster.publish(f"[GUI] 启动 Claude Code (模型: {model}, 目录: {cwd})...")
 
