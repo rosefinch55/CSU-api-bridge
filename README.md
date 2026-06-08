@@ -1,32 +1,25 @@
 # API Bridge
 
-Claude Code CLI 协议桥接服务。接收 Anthropic 格式请求，转发到任意后端 API。
+Claude Code CLI 协议桥接服务。本工具专为 **CSU 大学云 API** 设计，同时支持小米 mimo 等其他后端。
 
-**核心服务：CSU 大学云**（硬编码，必须走本地 Bridge 代理）。
+CSU 是本工具的核心服务，硬编码在程序中，必须通过本地 Bridge 代理连接（CSU 接口为 OpenAI 协议，需要转换层）。
 
 ## 两种模式
 
-### 1. OpenAI 兼容 → Anthropic（CSU）
-
-适用于 OpenAI 兼容接口（DeepSeek、Qwen、vLLM 等）。
+### 1. OpenAI → Anthropic 转换（CSU）
 
 ```
-Claude Code  →  apibridge  →  CSU (OpenAI 协议)
-(Anthropic)     转换层       (DeepSeek / Qwen)
+Claude Code  →  apibridge (Bridge)  →  CSU API
+(Anthropic)     协议转换              (DeepSeek / Qwen)
 ```
 
-自动处理：
-- 消息格式转换（system / tool_use / tool_result / 图片）
-- 工具定义转换（input_schema → parameters）
-- 流式 SSE 增量同步
+自动处理消息格式、工具定义、流式 SSE 的协议转换。
 
 ### 2. Anthropic 直传（小米）
 
-适用于原生 Anthropic 兼容接口（小米 mimo、第三方代理等）。
-
 ```
-Claude Code  →  apibridge  →  小米 mimo (Anthropic 协议)
-(Anthropic)     透传           (mimo-v2.5 / mimo-v2.5-pro)
+Claude Code  →  apibridge  →  小米 mimo
+(Anthropic)     透传           (mimo-v2.5)
 ```
 
 请求直接转发，不做格式转换。
@@ -41,54 +34,79 @@ pip install -r requirements.txt
 
 ### 2. 配置
 
-创建 `.env` 文件，填入 API key：
+创建 `.env` 文件：
 
 ```env
-CSU_KEY=sk-your-key-here
-MIMO_KEY=tp-your-key-here
+CSU_KEY=sk-your-csu-key
+MIMO_KEY=tp-your-mimo-key
 
 PORT=4000
 GUI_PORT=4100
-ENABLE_THINKING=false
-REQUEST_TIMEOUT=300
-BIND_HOST=0.0.0.0
 GUI_SELECTED_PROVIDER=csu
 GUI_SELECTED_MODEL=DeepSeek-V4-Flash
 ```
 
-> **安全提示**：API key 只存在 `.env` 中，`providers.json` 不存储 key（已加入 `.gitignore`）。
-
-> **注意**: 默认绑定 `0.0.0.0`（所有网卡）。如果在公网服务器上运行，建议设置 `BIND_HOST=127.0.0.1`。
-
 ### 3. 启动
 
-#### 命令行模式
-
 ```bash
-# CSU DeepSeek
-scripts/start-csu.bat
+# 命令行模式
+scripts/start-csu.bat      # CSU DeepSeek
+scripts/start-csu-qwen.bat # CSU Qwen
+scripts/start-mimo.bat     # 小米 mimo
 
-# CSU Qwen
-scripts/start-csu-qwen.bat
-
-# 小米 mimo
-scripts/start-mimo.bat
+# GUI 模式
+scripts/start-gui.bat      # Web 控制台 http://localhost:4100
 ```
 
-CSU 系列脚本会自动启动 bridge 服务（端口 4000），然后启动 Claude Code。
+CSU 脚本会自动启动 Bridge（端口 4000），然后启动 Claude Code。
 
-#### GUI 模式
+## API Key 管理
 
-```bash
-scripts/start-gui.bat
+### 存储位置
+
+| 文件 | 用途 | 是否上传 git |
+|------|------|-------------|
+| `.env` | API key 初始存储 | 否（.gitignore） |
+| `providers.json` | 厂商配置 + 用户设置的 key | 否（.gitignore） |
+
+### 读取逻辑
+
+```
+get_provider_key(provider, provider_id):
+  1. providers.json 有 key → 使用
+  2. providers.json 无 key → 读 .env 中的 {PROVIDER_ID}_KEY
 ```
 
-启动 Web 控制台 `http://localhost:4100`，支持：
-- 可视化配置厂商和模型
-- 一键拉取模型列表
-- 启停 Bridge 和 Claude
-- 实时日志查看
-- API Key 从 `.env` 读取，编辑厂商时可设置新 key
+### 写入逻辑
+
+- **GUI 编辑厂商**：输入 key → 保存到 `providers.json`
+- **GUI 保存配置**：不写入 key（只保存 URL、模型等）
+- **首次使用**：`.env` 中配置 key，GUI 自动读取显示（标记"来自 .env"）
+
+### 安全设计
+
+- `providers.json` 和 `.env` 均不上传 git
+- 编辑厂商时可设置新 key，保存到本地 `providers.json`
+- 未设置 key 时自动 fallback 到 `.env`
+
+## CSU 硬编码说明
+
+CSU 大学云是本工具的核心服务，以下配置硬编码在 `gui.py` 的 `DEFAULT_PROVIDERS` 中：
+
+```python
+"csu": {
+    "name": "CSU 大学云",
+    "requires_bridge": True,  # CSU 必须走桥接
+    "url": "https://api.chat.csu.edu.cn/v1",
+    "key": "",  # 从 .env 读取 CSU_KEY
+    "models_endpoint": "/models",
+}
+```
+
+硬编码原因：
+- 本工具专为 CSU API 设计
+- CSU 接口为 OpenAI 协议，必须通过 Bridge 转换
+- URL、协议类型等固定不变
 
 ## 项目结构
 
@@ -97,7 +115,7 @@ apibridge/
 ├── server.py          # Bridge 服务端（端口 4000）
 ├── gui.py             # Web 控制台后端（端口 4100）
 ├── providers.json     # 厂商配置（自动生成，不上传 git）
-├── .env               # 环境变量和 API key（不上传 git）
+├── .env               # API key 和环境变量（不上传 git）
 ├── requirements.txt   # Python 依赖
 ├── templates/
 │   └── index.html     # 控制台前端
